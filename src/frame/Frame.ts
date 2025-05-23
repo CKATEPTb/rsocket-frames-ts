@@ -44,7 +44,7 @@ export abstract class Frame extends FrameWriter {
         const writer = bebyte.writer()
         this.header.write(writer)
         this.write(writer)
-        this.metadata?.write?.(writer, this.payload != null)
+        this.metadata?.write?.(writer)
         this.payload?.write?.(writer)
         // TODO в каждой реализации может быть разный frame length limit, в java например это 65535, нужно проверить длину перед отправкой
         return writer.toUint8Array()

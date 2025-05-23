@@ -61,13 +61,15 @@ export class LeaseFrame extends Frame {
         return new LeaseFrame(
             reader.i32(),
             reader.i32(),
-            header.isFlagSet(FrameFlag.METADATA) ? Metadata.from(reader) : undefined
+            header.isFlagSet(FrameFlag.METADATA) ? Metadata.from(reader, false) : undefined
         )
     }
 
     protected write(writer: ByteWriter) {
         writer.i31(this.ttl)
         writer.i31(this.requestLimit)
+        const writeMetadata = this.metadata?.write
+        if(writeMetadata != null) this.metadata!.write = (writer: ByteWriter) => writeMetadata(writer, false)
     }
 
     public canBeIgnored(): boolean {

@@ -22,7 +22,7 @@ import {ExtensionFlag} from "@/frame";
  *     +-------------------------------+-------------------------------+
  *     |0|                      Extended Type                          |
  *     +---------------------------------------------------------------+
- *                           Depends on Extended Type...
+ *                         Depends on Extended Type...
  * ```
  *
  * * [__Frame Type__: (6 bits) 0x3F]{@link FrameType#EXT}

@@ -41,10 +41,12 @@ export class MetadataPushFrame extends Frame {
     }
 
     public static from(_: Header, reader: ByteReader): MetadataPushFrame {
-        return new MetadataPushFrame(Metadata.from(reader))
+        return new MetadataPushFrame(Metadata.from(reader, false))
     }
 
     protected write(_: ByteWriter) {
+        const writeMetadata = this.metadata?.write
+        if(writeMetadata != null) this.metadata!.write = (writer: ByteWriter) => writeMetadata(writer, false)
     }
 
     public canBeIgnored(): boolean {

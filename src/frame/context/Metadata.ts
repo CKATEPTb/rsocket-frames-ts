@@ -2,14 +2,15 @@ import {ByteReader, ByteWriter} from "bebyte";
 import {FrameWriter} from "@/frame/FrameWriter";
 
 export default class Metadata extends FrameWriter {
-    public write(writer: ByteWriter, hasPayload?: boolean): void {
-        // FrameValidation.isUint24(this.metadata!.length, () => new Error("metadata is out of 24-bit"))
-        // if (hasPayload) writer.i24(this.metadata!.length)
-        // writer.write(this.metadata!.serialize())
+    public constructor(public readonly data: Uint8Array) {
+        super();
+    }
+    public write(writer: ByteWriter, hasPayload: boolean = true): void {
+        if (hasPayload) writer.i16(this.data.length)
+        writer.write(this.data)
     }
 
-    public static from(reader: ByteReader): Metadata {
-        // TODO
-        return null as unknown as Metadata;
+    public static from(reader: ByteReader, hasPayload: boolean = true): Metadata {
+        return new Metadata(hasPayload ? reader.read(reader.i16()) : reader.readRemaining())
     }
 }

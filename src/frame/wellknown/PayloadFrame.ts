@@ -19,7 +19,7 @@ import Header from "@/frame/context/Header";
  *     +-----------+-+-+-+-+-+---------+-------------------------------+
  *     |Frame Type |0|M|F|C|N|  Flags  |
  *     +-------------------------------+-------------------------------+
- *                          Metadata & Data
+ *                             Metadata & Data
  * ```
  *
  * * [__Frame Type__: (6 bits) 0x0A]{@link FrameType#PAYLOAD}
