@@ -1,15 +1,33 @@
-import {FrameType} from "@/frame/enums/FrameType";
+import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {FrameFlag} from "@/frame/FrameFlag";
 import {FrameWriter} from "@/frame/FrameWriter";
 
-//      0                   1                   2                   3
-//      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |0|                         Stream ID                           |
-//     +-----------+-+-+---------------+-------------------------------+
-//     |Frame Type |I|M|     Flags     |     Depends on Frame Type    ...
-//     +-------------------------------+
+/**
+ * ### Frame Header Format
+ *
+ * RSocket frames begin with a RSocket Frame Header. The general layout is given below.
+ *
+ * ```
+ *      0                   1                   2                   3
+ *      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *     |0|                         Stream ID                           |
+ *     +-----------+-+-+---------------+-------------------------------+
+ *     |Frame Type |I|M|     Flags     |     Depends on Frame Type    ...
+ *     +-------------------------------+
+ * ```
+ *
+ * * __Stream ID__: (31 bits = max value 2^31-1 = 2,147,483,647) Unsigned 31-bit integer representing the stream Identifier for this frame or 0 to indicate the entire connection.
+ *   * Transport protocols that include demultiplexing, such as HTTP/2, MAY omit the Stream ID field if all parties agree. The means of negotiation and agreement is left to the transport protocol.
+ * * __Frame Type__: (6 bits = max value 63) Type of Frame.
+ * * [__Flags__: (10 bits)]{@link FrameFlag} Any Flag bit not specifically indicated in the frame type should be set to 0 when sent and not interpreted on
+ * reception. Flags generally depend on Frame Type, but all frame types MUST provide space for the following flags:
+ *      * (__I__)gnore: Ignore frame if not understood
+ *      * (__M__)etadata: Metadata present
+ *
+ * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-header-format}
+ */
 export default class Header extends FrameWriter {
     constructor(
         public readonly frameType: FrameType,  // (31 bits = max value 2^31-1 = 2,147,483,647) Unsigned 31-bit integer representing the stream Identifier for this frame or 0 to indicate the entire connection.

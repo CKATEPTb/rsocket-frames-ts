@@ -1,6 +1,6 @@
 import {Frame} from "@/frame/Frame";
 import bebyte from "bebyte";
-import {FrameType} from "@/frame/enums/FrameType";
+import {FrameType} from "@/frame/FrameType";
 import {ReservedFrame} from "@/frame/wellknown/ReservedFrame";
 import {SetupFrame} from "@/frame/wellknown/SetupFrame";
 import {LeaseFrame} from "@/frame/wellknown/LeaseFrame";

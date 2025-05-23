@@ -1,4 +1,4 @@
-export * from "@/frame/enums/FrameType";
+export * from "@/frame/FrameType";
 export * from "@/frame/FrameFlag";
 export * from "@/frame/Frame";
 export * from "@/frame/FrameDeserializer";

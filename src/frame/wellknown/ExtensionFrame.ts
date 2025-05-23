@@ -1,22 +1,47 @@
 import {Frame} from "@/frame/Frame";
-import {FrameType} from "@/frame/enums/FrameType";
+import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
-import {ErrorCode} from "@/frame/enums/ErrorCode";
+import {FrameErrorCode} from "@/frame/FrameErrorCode";
 import Payload from "@/frame/context/Payload";
 import Header from "@/frame/context/Header";
 import Metadata from "@/frame/context/Metadata";
 import {ExtensionFlag} from "@/frame";
 
-//      0                   1                   2                   3
-//      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-//     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-//     |                           Stream ID                           |
-//     +-----------+-+-+-+-+-+-+-+-+-+-+-------------------------------+
-//     |Frame Type |I|M|1|2|3|4|5|6|7|8|
-//     +-------------------------------+-------------------------------+
-//     |0|                      Extended Type                          |
-//     +---------------------------------------------------------------+
-//                        Depends on Extended Type...
+/**
+ * ### EXT (Extension) Frame (0x3F)
+ *
+ * The general format for an extension frame is given below.
+ *
+ * ```
+ *      0                   1                   2                   3
+ *      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+ *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ *     |0|                         Stream ID                           |
+ *     +-----------+-+-+---------------+-------------------------------+
+ *     |Frame Type |I|M|1|2|3|4|5|6|7|8|
+ *     +-------------------------------+-------------------------------+
+ *     |0|                      Extended Type                          |
+ *     +---------------------------------------------------------------+
+ *                           Depends on Extended Type...
+ * ```
+ *
+ * * [__Frame Type__: (6 bits) 0x3F]{@link FrameType#EXT}
+ * * [__Flags__: (10 bits)]{@link ExtensionFlag}
+ *     * (__I__)gnore: Can the frame be ignored if not understood?
+ *     * (__M__)etadata: Ext  Present.
+ *     * EXT_(__1__): Flag 1 Present.
+ *     * EXT_(__2__): Flag 2 Present.
+ *     * EXT_(__3__): Flag 3 Present.
+ *     * EXT_(__4__): Flag 4 Present.
+ *     * EXT_(__5__): Flag 5 Present.
+ *     * EXT_(__6__): Flag 6 Present.
+ *     * EXT_(__7__): Flag 7 Present.
+ *     * EXT_(__8__): Flag 8 Present.
+ * * __Extended Type__: (31 bits = max value 2^31-1 = 2,147,483,647) Unsigned 31-bit integer of Extended type information. Value MUST be > 0.
+ *
+ * @description Used To Extend more frame types as well as extensions.
+ * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-ext}
+ */
 export class ExtensionFrame extends Frame {
     public constructor(
         streamId: number,
@@ -32,7 +57,7 @@ export class ExtensionFrame extends Frame {
         return new ExtensionFrame(
             header.streamId,
             header.flags,
-            ErrorCode.fromByte(reader.i32()),
+            FrameErrorCode.fromByte(reader.i32()),
             header.isFlagSet(ExtensionFlag.METADATA) ? Metadata.from(reader) : undefined,
             Payload.from(reader)
         )

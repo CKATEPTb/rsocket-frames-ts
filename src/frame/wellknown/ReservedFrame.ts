@@ -1,9 +1,14 @@
 import {Frame} from "@/frame/Frame";
-import {FrameType} from "@/frame/enums/FrameType";
+import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
 import {FrameFlag} from "@/frame";
 
+/**
+ *
+ * [__Frame Type__: (6 bits) 0x00]{@link FrameType#RESERVED}
+ * @description Reserved
+ */
 export class ReservedFrame extends Frame {
     public constructor(streamId: number) {
         super(FrameType.RESERVED, streamId, FrameFlag.IGNORE)
