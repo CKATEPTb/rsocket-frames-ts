@@ -4,7 +4,7 @@ import Payload from "@/frame/context/Payload";
 import {FrameType} from "@/frame/enums/FrameType";
 import {FrameFlag} from "@/frame/FrameFlag";
 import {FrameWriter} from "@/frame/FrameWriter";
-import {Buffer} from "bebyte";
+import bebyte from "bebyte";
 
 export abstract class Frame extends FrameWriter {
     protected readonly header: Header
@@ -41,7 +41,7 @@ export abstract class Frame extends FrameWriter {
     }
 
     public toUint8Array(): Uint8Array {
-        const writer = Buffer.writer()
+        const writer = bebyte.writer()
         this.header.write(writer)
         this.write(writer)
         this.metadata?.write?.(writer, this.payload != null)

@@ -1,5 +1,5 @@
 import {Frame} from "@/frame/Frame";
-import {Buffer} from "bebyte";
+import bebyte from "bebyte";
 import {FrameType} from "@/frame/enums/FrameType";
 import {ReservedFrame} from "@/frame/wellknown/ReservedFrame";
 import {SetupFrame} from "@/frame/wellknown/SetupFrame";
@@ -20,7 +20,7 @@ import {ExtensionFrame} from "@/frame/wellknown/ExtensionFrame";
 import Header from "@/frame/context/Header";
 
 function deserialize(buffer: Uint8Array): Frame {
-    const reader = Buffer.reader(buffer)
+    const reader = bebyte.reader(buffer)
     const header = Header.from(reader)
     switch (header.frameType) {
         case FrameType.RESERVED:

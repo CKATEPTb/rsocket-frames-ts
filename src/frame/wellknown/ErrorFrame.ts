@@ -2,7 +2,7 @@ import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/enums/FrameType";
 import {ErrorCode} from "@/frame/enums/ErrorCode";
 import Payload from "@/frame/context/Payload";
-import {Buffer, ByteReader, ByteWriter} from "bebyte";
+import bebyte, {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
 
 //      0                   1                   2                   3
@@ -28,7 +28,7 @@ export class ErrorFrame extends Frame {
         return new ErrorFrame(
             header.streamId,
             ErrorCode.fromByte(reader.i32()),
-            Payload.from(Buffer.reader(reader.readRemaining()))
+            Payload.from(bebyte.reader(reader.readRemaining()))
         )
     }
 
