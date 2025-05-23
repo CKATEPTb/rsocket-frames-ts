@@ -1,7 +1,19 @@
 import RSocket from "@/connection/RSocket";
-import {Frame, FrameDeserializer, FrameType, KeepaliveFlag, KeepaliveFrame, SetupFrame} from "@/frame";
+import {
+    FireAndForgetFlag,
+    Frame,
+    FrameDeserializer,
+    FrameType,
+    KeepaliveFlag,
+    KeepaliveFrame,
+    RequestFireAndForgetFrame,
+    SetupFrame
+} from "@/frame";
 import {Flux, ManySink, Mono, Sinks} from "@ckateptb/reactive-core-js";
 import {WellKnownMimeType} from "@/mimetype/WellKnownMimeType";
+import {encode} from "@/utils";
+import Payload from "@/frame/context/Payload";
+import Metadata from "@/frame/context/Metadata";
 
 class StreamIdSupplier {
     public constructor(private init: number) {
@@ -51,7 +63,7 @@ export class Connection implements RSocket {
                 })
             backpressure.request(Number.MAX_SAFE_INTEGER)
 
-            this.sendFrame(new SetupFrame(15000, 15000, WellKnownMimeType.APPLICATION_JSON, WellKnownMimeType.APPLICATION_JSON))
+            this.sendFrame(new SetupFrame(15000, 15000, WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, WellKnownMimeType.APPLICATION_JSON))
             setInterval(() => {
                 this.sendFrame(new KeepaliveFrame(KeepaliveFlag.RESPOND))
             }, 7500)
@@ -72,28 +84,20 @@ export class Connection implements RSocket {
     }
 
     public fireAndForget<T>(payload: Mono<T>): Mono<void> {
-        // const sink = Sinks.one()
-        // const streamId = this.streamIds.next()
-        // const subscription = Flux.from(this.callbacks)
-        //     .filter(value => value.streamId === streamId)
-        //     .doOnSubscribe(({request}) => request(Number.MAX_SAFE_INTEGER))
-        //     .subscribe({
-        //         onNext: () => {
-        //             subscription.unsubscribe()
-        //             sink.complete()
-        //         }
-        //     })
-        // payload.subscribe({ // todo on error and on complete, проверить unsubscribe когда complete
-        //     onNext: value => {
-        //         this.requests.next({
-        //             stream: streamId,
-        //             data: value,
-        //             completed: true
-        //         })
-        //     }
-        // }).request(1)
-        // return Mono.from<void>(sink)
-        return undefined as unknown as Mono<void> // todo
+        const sink = Sinks.one()
+        const streamId = this.streamIds.next()
+        payload.subscribe({
+            onNext: value => {
+                this.requests.next(new RequestFireAndForgetFrame(
+                    streamId,
+                    FireAndForgetFlag.NONE,
+                    new Metadata(WellKnownMimeType.MESSAGE_RSOCKET_ROUTING.asMetadataPayload(encode('fnf'))),
+                    new Payload(encode(JSON.stringify(value)))
+                ))
+                sink.complete()
+            }
+        }).request(1)
+        return Mono.from<void>(sink)
     }
 
     public requestResponse<T, R>(payload: Mono<T>): Mono<R> {

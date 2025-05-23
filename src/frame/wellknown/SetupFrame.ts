@@ -119,10 +119,10 @@ export class SetupFrame extends Frame {
             writer.i16(resumeToken.length)
             writer.write(resumeToken)
         }
-        const metadataType = encode(this.metadataType)
+        const metadataType = encode(this.metadataType.mimeType)
         writer.i8(metadataType.length)
         writer.write(metadataType)
-        const dataType = encode(this.dataType)
+        const dataType = encode(this.dataType.mimeType)
         writer.i8(dataType.length)
         writer.write(dataType)
     }

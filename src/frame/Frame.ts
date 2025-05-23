@@ -13,8 +13,8 @@ export abstract class Frame extends FrameWriter {
         type: FrameType,
         streamId: number,
         flags: FrameFlag = FrameFlag.NONE,
-        protected readonly metadata?: Metadata,
-        protected readonly payload?: Payload
+        public readonly metadata?: Metadata,
+        public readonly payload?: Payload
     ) {
         super()
         this.header = new Header(
