@@ -1,4 +1,5 @@
-import {MetadataPayload} from "@/frame/context/Metadata";
+import bebyte, {ByteReader, ByteWriter} from "bebyte";
+import {decode, encode} from "@/utils";
 
 export class WellKnownMimeType {
     public constructor(
@@ -52,22 +53,158 @@ export class WellKnownMimeType {
     public static APPLICATION_HESSIAN = new WellKnownMimeType('application/x-hessian', 0x26)
     public static APPLICATION_JAVA_OBJECT = new WellKnownMimeType('application/x-java-object', 0x27)
     public static APPLICATION_CLOUDEVENTS_JSON = new WellKnownMimeType('application/cloudevents+json', 0x28)
-    public static MESSAGE_RSOCKET_MIMETYPE = new WellKnownMimeType('message/x.rsocket.mime-type.v0', 0x7A)
-    public static MESSAGE_RSOCKET_ACCEPT_MIMETYPES = new WellKnownMimeType('message/x.rsocket.accept-mime-types.v0', 0x7b)
+    public static MESSAGE_RSOCKET_MIMETYPE = new class _ extends WellKnownMimeType {
+        public toMetadata<T = WellKnownMimeType>(payload: T): MetadataMimeType<T> {
+            return new class _ extends MetadataMimeType<T> {
+                public toUint8Array(): Uint8Array {
+                    const writer = bebyte.writer()
+                    const castedPayload = payload as WellKnownMimeType
+                    if (castedPayload.isWellKnown) writer.i8(128 | castedPayload.identifier!)
+                    else {
+                        const type = encode(castedPayload.mimeType)
+                        writer.i7(type.length)
+                        writer.write(type)
+                    }
+                    return writer.toUint8Array()
+                }
+            }(this.mimeType, this.identifier, payload)
+        }
+
+        public readMetadata<T = WellKnownMimeType>(reader: ByteReader, hasPayload: boolean = true): MetadataMimeType<T> {
+            const array = super.readMetadata(reader, hasPayload).toUint8Array()
+            const buffer = bebyte.reader(array);
+            const i8 = buffer.i8()
+            const i7 = i8 & 0x7F
+            return new MetadataMimeType(this.mimeType, this.identifier, (i8 >> 7 ? WellKnownMimeType.valueOf(i7) : new WellKnownMimeType(decode(buffer.read(i7)))) as T)
+        }
+    }('message/x.rsocket.mime-type.v0', 0x7A)
+    public static MESSAGE_RSOCKET_ACCEPT_MIMETYPES = new class _ extends WellKnownMimeType {
+        public toMetadata<T = Array<WellKnownMimeType>>(payloads: T): MetadataMimeType<T> {
+            return new class _ extends MetadataMimeType<T> {
+                public toUint8Array(): Uint8Array {
+                    return (payloads as Array<WellKnownMimeType>).reduce((acc, payload) => {
+                        if (payload.isWellKnown) acc.i8(128 | payload.identifier!)
+                        else {
+                            const type = encode(payload.mimeType)
+                            acc.i7(type.length)
+                            acc.write(type)
+                        }
+                        return acc
+                    }, bebyte.writer()).toUint8Array()
+                }
+            }(this.mimeType, this.identifier, payloads)
+        }
+
+        public readMetadata<T = Array<WellKnownMimeType>>(reader: ByteReader, hasPayload: boolean = true): MetadataMimeType<T> {
+            const array = super.readMetadata(reader, hasPayload).toUint8Array()
+            const buffer = bebyte.reader(array);
+            const payloads: Array<WellKnownMimeType> = []
+            while (buffer.offset < array.length) {
+                const i8 = buffer.i8()
+                const i7 = i8 & 0x7F
+                payloads.push(i8 >> 7 ? WellKnownMimeType.valueOf(i7) : new WellKnownMimeType(decode(buffer.read(i7))))
+            }
+            return new MetadataMimeType(this.mimeType, this.identifier, payloads as T)
+        }
+    }('message/x.rsocket.accept-mime-types.v0', 0x7b)
     public static MESSAGE_RSOCKET_AUTHENTICATION = new WellKnownMimeType('message/x.rsocket.authentication.v0', 0x7C)
-    public static MESSAGE_RSOCKET_TRACING_ZIPKIN = new WellKnownMimeType('message/x.rsocket.tracing-zipkin.v0', 0x7D)
-    public static MESSAGE_RSOCKET_ROUTING = new WellKnownMimeType('message/x.rsocket.routing.v0', 0x7E)
-    public static MESSAGE_RSOCKET_COMPOSITE_METADATA = new WellKnownMimeType('message/x.rsocket.composite-metadata.v0', 0x7F)
+    public static MESSAGE_RSOCKET_TRACING_ZIPKIN = new class _ extends WellKnownMimeType {
+        // TODO https://github.com/rsocket/rsocket/blob/master/Extensions/Tracing-Zipkin.md
+    }('message/x.rsocket.tracing-zipkin.v0', 0x7D)
+
+    public static MESSAGE_RSOCKET_ROUTING = new class _ extends WellKnownMimeType {
+        public toMetadata<T = Array<string>>(payloads: T): MetadataMimeType<T> {
+            return new class _ extends MetadataMimeType<T> {
+                public toUint8Array(): Uint8Array {
+                    return (payloads as Array<string>).reduce((acc, payload) => {
+                        const tag = encode(payload)
+                        acc.i8(tag.length)
+                        acc.write(tag)
+                        return acc
+                    }, bebyte.writer()).toUint8Array()
+                }
+            }(this.mimeType, this.identifier, payloads)
+        }
+
+        public readMetadata<T = Array<string>>(reader: ByteReader, hasPayload: boolean = true): MetadataMimeType<T> {
+            const array = super.readMetadata(reader, hasPayload).toUint8Array();
+            const buffer = bebyte.reader(array)
+            const payloads: Array<string> = []
+            while (buffer.offset < array.length) {
+                payloads.push(decode(buffer.read(buffer.i8())))
+            }
+            return new MetadataMimeType<T>(this.mimeType, this.identifier, payloads as T)
+        }
+    }('message/x.rsocket.routing.v0', 0x7E)
+
+    public static MESSAGE_RSOCKET_COMPOSITE_METADATA = new class _ extends WellKnownMimeType {
+        public toMetadata<T = Array<MetadataMimeType<any>>>(payloads: T): MetadataMimeType<T> {
+            return new class _ extends MetadataMimeType<T> {
+                public toUint8Array(): Uint8Array {
+                    return (payloads as Array<MetadataMimeType<any>>).reduce((acc, payload) => {
+                        if (payload.isWellKnown) acc.i8(128 | payload.identifier!)
+                        else {
+                            const type = encode(payload.mimeType)
+                            acc.i7(type.length)
+                            acc.write(type)
+                        }
+                        payload.write(acc, true)
+                        return acc
+                    }, bebyte.writer()).toUint8Array()
+                }
+            }(this.mimeType, this.identifier, payloads)
+        }
+
+        public readMetadata<T = Array<MetadataMimeType<any>>>(reader: ByteReader, hasPayload: boolean = true): MetadataMimeType<T> {
+            const array = super.readMetadata(reader, hasPayload).toUint8Array()
+            const buffer = bebyte.reader(array);
+            const payloads: Array<MetadataMimeType<any>> = []
+            while (buffer.offset < array.length) {
+                const i8 = buffer.i8()
+                const i7 = i8 & 0x7F
+                const mimeType = i8 >> 7 ? WellKnownMimeType.valueOf(i7) : new WellKnownMimeType(decode(buffer.read(i7)))
+                const data = bebyte.reader(buffer.read(buffer.i24()))
+                payloads.push(new MetadataMimeType<any>(mimeType.mimeType, mimeType.identifier, mimeType.readMetadata(data, true)))
+            }
+            return new MetadataMimeType(this.mimeType, this.identifier, payloads as T)
+        }
+    }('message/x.rsocket.composite-metadata.v0', 0x7F)
+
+    public toMetadata<T>(payload: T): MetadataMimeType<T> {
+        return new MetadataMimeType(this.mimeType, this.identifier, payload);
+    }
+
+    public readMetadata<T = Uint8Array>(reader: ByteReader, hasPayload: boolean = true): MetadataMimeType<T> {
+        const buffer = hasPayload ? reader.read(reader.i24()) : reader.readRemaining()
+        return new MetadataMimeType(this.mimeType, this.identifier, buffer as T)
+    }
 
     public static valueOf(mimeType: string | number): WellKnownMimeType {
         return Object.values(WellKnownMimeType).filter(
                 v => v instanceof WellKnownMimeType
             ).find(v => mimeType == (typeof mimeType == "string" ? v.mimeType : v.identifier)) ||
-            new WellKnownMimeType(String(mimeType));
+            new class UnknownMimeType extends WellKnownMimeType {
+
+            }(String(mimeType));
+    }
+}
+
+export class MetadataMimeType<T = Uint8Array> extends WellKnownMimeType {
+    constructor(
+        mimeType: string,
+        identifier: number | undefined,
+        public readonly payload: T
+    ) {
+        super(mimeType, identifier);
     }
 
-    public asMetadataPayload(data: Uint8Array): MetadataPayload {
-        // TODO реализовать отдельно для composite, router, zipkin в соответствии к спецификации.
-        return new MetadataPayload(this, data)
+    public toUint8Array(): Uint8Array {
+        return this.payload as Uint8Array
+    }
+
+    public write(writer: ByteWriter, hasPayload: boolean = true) {
+        const array = this.toUint8Array()
+        if (hasPayload) writer.i24(array.length)
+        writer.write(array)
     }
 }
