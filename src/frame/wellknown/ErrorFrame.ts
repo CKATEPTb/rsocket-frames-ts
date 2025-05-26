@@ -5,6 +5,7 @@ import Payload from "@/frame/context/Payload";
 import bebyte, {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
 import {FrameFlag} from "@/frame";
+import {MimeType} from "@/mimetype";
 
 /**
  * ### ERROR Frame (0x0B)
@@ -74,7 +75,7 @@ export class ErrorFrame extends Frame {
         super(FrameType.ERROR, streamId, FrameFlag.NONE, undefined, payload);
     }
 
-    public static from(header: Header, reader: ByteReader): ErrorFrame {
+    public static from(header: Header, reader: ByteReader, _: MimeType): ErrorFrame {
         return new ErrorFrame(
             header.streamId,
             FrameErrorCode.fromByte(reader.i32()),

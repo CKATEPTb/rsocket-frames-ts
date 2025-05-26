@@ -3,6 +3,7 @@ import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
 import {decode, encode} from "@/utils";
+import {MimeType} from "@/mimetype";
 
 /**
  * #### RESUME Frame (0x0D)
@@ -55,7 +56,7 @@ export class ResumeFrame extends Frame {
         super(FrameType.RESUME, 0)
     }
 
-    public static from(_: Header, reader: ByteReader): ResumeFrame {
+    public static from(_: Header, reader: ByteReader, __: MimeType): ResumeFrame {
         const major = reader.i16()
         const minor = reader.i16()
         const resumeToken = decode(reader.read(reader.i16()))

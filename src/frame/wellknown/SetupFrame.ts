@@ -1,9 +1,8 @@
 import {Frame} from "@/frame/Frame";
-import Metadata from "@/frame/context/Metadata";
 import Payload from "@/frame/context/Payload";
 import {FrameType} from "@/frame/FrameType";
 import {decode, encode} from "@/utils";
-import {WellKnownMimeType} from "@/mimetype/WellKnownMimeType";
+import {Metadata, MimeType} from "@/mimetype/MimeType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {ExtensionFlag, SetupFlag} from "@/frame";
 import Header from "@/frame/context/Header";
@@ -83,28 +82,28 @@ export class SetupFrame extends Frame {
     public constructor(
         public readonly keepalive: number,
         public readonly lifetime: number,
-        public readonly metadataType: WellKnownMimeType,
-        public readonly dataType: WellKnownMimeType,
+        public readonly metadataType: MimeType<any>,
+        public readonly dataType: MimeType<any>,
         public readonly resumeToken?: string,
         public readonly majorVersion: number = 1,
         public readonly minorVersion: number = 0,
         flags: SetupFlag = SetupFlag.NONE,
-        metadata?: Metadata,
+        metadata?: Metadata<any>,
         payload?: Payload
     ) {
         flags = SetupFlag.combine(flags, resumeToken != undefined ? SetupFlag.RESUME : SetupFlag.NONE)
         super(FrameType.SETUP, 0, flags, metadata, payload)
     }
 
-    public static from(header: Header, reader: ByteReader): SetupFrame {
+    public static from(header: Header, reader: ByteReader, _: MimeType): SetupFrame {
         const major = reader.i16()
         const minor = reader.i16()
         const keepalive = reader.i32()
         const lifetime = reader.i32()
         const resumeToken = header.isFlagSet(SetupFlag.RESUME) ? decode(reader.read(reader.i16())) : undefined
-        const metadataType = WellKnownMimeType.valueOf(decode(reader.read(reader.i8())))
-        const dataType = WellKnownMimeType.valueOf(decode(reader.read(reader.i8())))
-        const metadata = header.isFlagSet(ExtensionFlag.METADATA) ? Metadata.from(reader) : undefined
+        const metadataType = MimeType.valueOf(decode(reader.read(reader.i8())))
+        const dataType = MimeType.valueOf(decode(reader.read(reader.i8())))
+        const metadata = header.isFlagSet(ExtensionFlag.METADATA) ? metadataType.readMetadata(reader) : undefined
         const payload = Payload.from(reader)
         return new SetupFrame(keepalive, lifetime, metadataType, dataType, resumeToken, major, minor, header.flags, metadata, payload)
     }

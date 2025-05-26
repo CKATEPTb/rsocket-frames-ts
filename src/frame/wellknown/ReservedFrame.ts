@@ -3,6 +3,7 @@ import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
 import {FrameFlag} from "@/frame";
+import {MimeType} from "@/mimetype";
 
 /**
  *
@@ -15,7 +16,7 @@ export class ReservedFrame extends Frame {
         throw new Error("Reserved frame could not be created!")
     }
 
-    public static from(header: Header, _: ByteReader): ReservedFrame {
+    public static from(header: Header, _: ByteReader, __: MimeType): ReservedFrame {
         return new ReservedFrame(header.streamId)
     }
 

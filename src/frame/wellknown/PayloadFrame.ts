@@ -2,9 +2,9 @@ import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {PayloadFlag} from "@/frame";
-import Metadata from "@/frame/context/Metadata";
 import Payload from "@/frame/context/Payload";
 import Header from "@/frame/context/Header";
+import {Metadata, MimeType} from "@/mimetype";
 
 /**
  * ### PAYLOAD Frame (0x0A)
@@ -54,17 +54,17 @@ export class PayloadFrame extends Frame {
     public constructor(
         streamId: number,
         flags: PayloadFlag,
-        metadata?: Metadata,
+        metadata?: Metadata<any>,
         payload?: Payload
     ) {
         super(FrameType.PAYLOAD, streamId, flags, metadata, payload);
     }
 
-    public static from(header: Header, reader: ByteReader): PayloadFrame {
+    public static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): PayloadFrame {
         return new PayloadFrame(
             header.streamId,
             header.flags,
-            header.isFlagSet(PayloadFlag.METADATA) ? Metadata.from(reader) : undefined,
+            header.isFlagSet(PayloadFlag.METADATA) ? metadataMimeType.readMetadata(reader) : undefined,
             Payload.from(reader)
         )
     }

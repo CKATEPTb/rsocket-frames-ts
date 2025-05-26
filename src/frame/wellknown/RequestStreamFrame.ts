@@ -2,9 +2,9 @@ import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {RequestChannelFlag, RequestStreamFlag} from "@/frame";
-import Metadata from "@/frame/context/Metadata";
 import Payload from "@/frame/context/Payload";
 import Header from "@/frame/context/Header";
+import {Metadata, MimeType} from "@/mimetype";
 
 /**
  *
@@ -42,18 +42,18 @@ export class RequestStreamFrame extends Frame {
         streamId: number,
         flags: RequestStreamFlag,
         public readonly request: number,
-        metadata?: Metadata,
+        metadata?: Metadata<any>,
         payload?: Payload
     ) {
         super(FrameType.REQUEST_STREAM, streamId, flags, metadata, payload);
     }
 
-    public static from(header: Header, reader: ByteReader): RequestStreamFrame {
+    public static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): RequestStreamFrame {
         return new RequestStreamFrame(
             header.streamId,
             header.flags,
             reader.i32(),
-            header.isFlagSet(RequestChannelFlag.METADATA) ? Metadata.from(reader) : undefined,
+            header.isFlagSet(RequestChannelFlag.METADATA) ? metadataMimeType.readMetadata(reader) : undefined,
             Payload.from(reader)
         )
     }

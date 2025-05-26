@@ -2,8 +2,8 @@ import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {FrameFlag} from "@/frame";
-import Metadata from "@/frame/context/Metadata";
 import Header from "@/frame/context/Header";
+import {Metadata, MimeType} from "@/mimetype";
 
 /**
  * ### LEASE Frame (0x02)
@@ -52,16 +52,16 @@ export class LeaseFrame extends Frame {
     public constructor(
         public readonly ttl: number,
         public readonly requestLimit: number,
-        metadata?: Metadata
+        metadata?: Metadata<any>
     ) {
         super(FrameType.LEASE, 0, FrameFlag.NONE, metadata, undefined);
     }
 
-    public static from(header: Header, reader: ByteReader): LeaseFrame {
+    public static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): LeaseFrame {
         return new LeaseFrame(
             reader.i32(),
             reader.i32(),
-            header.isFlagSet(FrameFlag.METADATA) ? Metadata.from(reader, false) : undefined
+            header.isFlagSet(FrameFlag.METADATA) ? metadataMimeType.readMetadata(reader, false) : undefined
         )
     }
 

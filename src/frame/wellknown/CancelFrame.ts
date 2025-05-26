@@ -2,6 +2,7 @@ import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
+import {MimeType} from "@/mimetype";
 
 /**
  * ### CANCEL Frame (0x09)
@@ -25,7 +26,7 @@ export class CancelFrame extends Frame {
         super(FrameType.CANCEL, streamId);
     }
 
-    public static from(header: Header, _: ByteReader): CancelFrame {
+    public static from(header: Header, _: ByteReader, __: MimeType): CancelFrame {
         return new CancelFrame(header.streamId)
     }
 

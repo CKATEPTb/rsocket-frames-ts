@@ -4,6 +4,7 @@ import Payload from "@/frame/context/Payload";
 import {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
 import {KeepaliveFlag} from "@/frame";
+import {MimeType} from "@/mimetype";
 
 /**
  * ### KEEPALIVE Frame (0x03)
@@ -57,7 +58,7 @@ export class KeepaliveFrame extends Frame {
         super(FrameType.KEEPALIVE, 0, flags, undefined, payload);
     }
 
-    public static from(header: Header, reader: ByteReader): KeepaliveFrame {
+    public static from(header: Header, reader: ByteReader, _: MimeType): KeepaliveFrame {
         return new KeepaliveFrame(
             header.flags,
             reader.i64(),

@@ -1,10 +1,10 @@
 import Header from "@/frame/context/Header";
-import Metadata from "@/frame/context/Metadata";
 import Payload from "@/frame/context/Payload";
 import {FrameType} from "@/frame/FrameType";
 import {FrameFlag} from "@/frame/FrameFlag";
 import {FrameWriter} from "@/frame/FrameWriter";
 import bebyte from "bebyte";
+import {Metadata} from "@/mimetype";
 
 export abstract class Frame extends FrameWriter {
     protected readonly header: Header

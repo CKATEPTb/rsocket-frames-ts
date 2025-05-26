@@ -2,6 +2,7 @@ import {Frame} from "@/frame";
 import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
+import {MimeType} from "@/mimetype";
 
 /**
  * ### REQUEST_N Frame (0x08)
@@ -36,7 +37,7 @@ export class RequestNFrame extends Frame {
         super(FrameType.REQUEST_N, streamId);
     }
 
-    public static from(header: Header, reader: ByteReader): RequestNFrame {
+    public static from(header: Header, reader: ByteReader, _: MimeType): RequestNFrame {
         return new RequestNFrame(
             header.streamId,
             reader.i32()

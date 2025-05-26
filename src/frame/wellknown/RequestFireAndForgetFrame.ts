@@ -2,9 +2,9 @@ import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {FireAndForgetFlag} from "@/frame";
-import Metadata from "@/frame/context/Metadata";
 import Payload from "@/frame/context/Payload";
 import Header from "@/frame/context/Header";
+import {Metadata, MimeType} from "@/mimetype";
 
 /**
  * ### REQUEST_FNF (Fire-n-Forget) Frame (0x05)
@@ -35,17 +35,17 @@ export class RequestFireAndForgetFrame extends Frame {
     public constructor(
         streamId: number,
         flags: FireAndForgetFlag,
-        metadata?: Metadata,
+        metadata?: Metadata<any>,
         payload?: Payload
     ) {
         super(FrameType.REQUEST_FNF, streamId, flags, metadata, payload);
     }
 
-    public static from(header: Header, reader: ByteReader): RequestFireAndForgetFrame {
+    public static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): RequestFireAndForgetFrame {
         return new RequestFireAndForgetFrame(
             header.streamId,
             header.flags,
-            header.isFlagSet(FireAndForgetFlag.METADATA) ? Metadata.from(reader) : undefined,
+            header.isFlagSet(FireAndForgetFlag.METADATA) ? metadataMimeType.readMetadata(reader) : undefined,
             Payload.from(reader)
         )
     }

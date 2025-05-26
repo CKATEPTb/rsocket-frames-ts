@@ -1,4 +1,4 @@
 export * from '@/connection'
-export * from '@/mimetype/WellKnownMimeType'
+export * from '@/mimetype/MimeType'
 export * from '@/frame'
 

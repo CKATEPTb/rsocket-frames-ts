@@ -141,94 +141,28 @@ declare class Header extends FrameWriter {
     write(writer: ByteWriter): void;
 }
 
-declare class WellKnownMimeType {
-    readonly mimeType: string;
-    readonly identifier?: number | undefined;
-    constructor(mimeType: string, identifier?: number | undefined);
-    get isWellKnown(): boolean;
-    static APPLICATION_AVRO: WellKnownMimeType;
-    static APPLICATION_CBOR: WellKnownMimeType;
-    static APPLICATION_GRAPHQL: WellKnownMimeType;
-    static APPLICATION_GZIP: WellKnownMimeType;
-    static APPLICATION_JAVASCRIPT: WellKnownMimeType;
-    static APPLICATION_JSON: WellKnownMimeType;
-    static APPLICATION_OCTET_STREAM: WellKnownMimeType;
-    static APPLICATION_PDF: WellKnownMimeType;
-    static APPLICATION_THRIFT: WellKnownMimeType;
-    static APPLICATION_PROTOBUF: WellKnownMimeType;
-    static APPLICATION_XML: WellKnownMimeType;
-    static APPLICATION_ZIP: WellKnownMimeType;
-    static AUDIO_AAC: WellKnownMimeType;
-    static AUDIO_MP3: WellKnownMimeType;
-    static AUDIO_MP4: WellKnownMimeType;
-    static AUDIO_MPEG3: WellKnownMimeType;
-    static AUDIO_MPEG: WellKnownMimeType;
-    static AUDIO_OGG: WellKnownMimeType;
-    static AUDIO_OPUS: WellKnownMimeType;
-    static AUDIO_VORBIS: WellKnownMimeType;
-    static IMAGE_BMP: WellKnownMimeType;
-    static IMAGE_GIF: WellKnownMimeType;
-    static IMAGE_HEIC_SEQUENCE: WellKnownMimeType;
-    static IMAGE_HEIC: WellKnownMimeType;
-    static IMAGE_HEIF_SEQUENCE: WellKnownMimeType;
-    static IMAGE_HEIF: WellKnownMimeType;
-    static IMAGE_JPEG: WellKnownMimeType;
-    static IMAGE_PNG: WellKnownMimeType;
-    static IMAGE_TIFF: WellKnownMimeType;
-    static MULTIPART_MIXED: WellKnownMimeType;
-    static TEXT_CSS: WellKnownMimeType;
-    static TEXT_CSV: WellKnownMimeType;
-    static TEXT_HTML: WellKnownMimeType;
-    static TEXT_PLAIN: WellKnownMimeType;
-    static TEXT_XML: WellKnownMimeType;
-    static VIDEO_H264: WellKnownMimeType;
-    static VIDEO_H265: WellKnownMimeType;
-    static VIDEO_VP8: WellKnownMimeType;
-    static APPLICATION_HESSIAN: WellKnownMimeType;
-    static APPLICATION_JAVA_OBJECT: WellKnownMimeType;
-    static APPLICATION_CLOUDEVENTS_JSON: WellKnownMimeType;
-    static MESSAGE_RSOCKET_MIMETYPE: WellKnownMimeType;
-    static MESSAGE_RSOCKET_ACCEPT_MIMETYPES: WellKnownMimeType;
-    static MESSAGE_RSOCKET_AUTHENTICATION: WellKnownMimeType;
-    static MESSAGE_RSOCKET_TRACING_ZIPKIN: WellKnownMimeType;
-    static MESSAGE_RSOCKET_ROUTING: WellKnownMimeType;
-    static MESSAGE_RSOCKET_COMPOSITE_METADATA: WellKnownMimeType;
-    static valueOf(mimeType: string | number): WellKnownMimeType;
-    asMetadataPayload(data: Uint8Array): MetadataPayload;
-}
-
-declare class Metadata extends FrameWriter {
-    readonly payload: MetadataPayload[];
-    constructor(...payload: MetadataPayload[]);
-    write(writer: ByteWriter, hasPayload?: boolean): void;
-    static from(reader: ByteReader, hasPayload?: boolean): Metadata;
-}
-/**
- * ```
- *      0                   1                   2                   3
- *      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *     |M| MIME ID/Len |   Metadata Encoding MIME Type                ...
- *     +---------------+---------------+---------------+---------------+
- *     |              Metadata Length                  |
- *     +-----------------------------------------------+---------------+
- *     |                     Metadata Payload                         ...
- *     +---------------+-----------------------------------------------+
- * ```
- */
-declare class MetadataPayload extends FrameWriter {
-    readonly mimeType: WellKnownMimeType;
-    readonly data: Uint8Array;
-    constructor(mimeType: WellKnownMimeType, data: Uint8Array);
-    static from(reader: ByteReader): MetadataPayload;
-    write(writer: ByteWriter): void;
-}
-
 declare class Payload extends FrameWriter {
     readonly data: Uint8Array;
     constructor(data: Uint8Array);
     write(writer: ByteWriter): void;
     static from(reader: ByteReader): Payload;
+}
+
+declare class MimeType<T = Uint8Array> {
+    readonly mimeType: string;
+    readonly identifier?: number | undefined;
+    private static _values;
+    constructor(mimeType: string, identifier?: number | undefined);
+    get isWellKnown(): boolean;
+    toMetadata(payload: T): Metadata<T>;
+    readMetadata(reader: ByteReader, hasPayload?: boolean): Metadata<T>;
+    static valueOf(mimeType: string | number): MimeType;
+}
+declare class Metadata<T = Uint8Array> extends MimeType {
+    readonly payload: T;
+    constructor(mimeType: string, identifier: number | undefined, payload: T);
+    toUint8Array(): Uint8Array;
+    write(writer: ByteWriter, hasPayload?: boolean): void;
 }
 
 declare abstract class Frame extends FrameWriter {
@@ -244,7 +178,7 @@ declare abstract class Frame extends FrameWriter {
 }
 
 declare const FrameDeserializer: {
-    deserialize: (buffer: Uint8Array) => Frame;
+    deserialize: (buffer: Uint8Array, mimeType: MimeType) => Frame;
 };
 
 /**
@@ -321,13 +255,13 @@ declare const FrameDeserializer: {
 declare class SetupFrame extends Frame {
     readonly keepalive: number;
     readonly lifetime: number;
-    readonly metadataType: WellKnownMimeType;
-    readonly dataType: WellKnownMimeType;
+    readonly metadataType: MimeType<any>;
+    readonly dataType: MimeType<any>;
     readonly resumeToken?: string | undefined;
     readonly majorVersion: number;
     readonly minorVersion: number;
-    constructor(keepalive: number, lifetime: number, metadataType: WellKnownMimeType, dataType: WellKnownMimeType, resumeToken?: string | undefined, majorVersion?: number, minorVersion?: number, flags?: SetupFlag, metadata?: Metadata, payload?: Payload);
-    static from(header: Header, reader: ByteReader): SetupFrame;
+    constructor(keepalive: number, lifetime: number, metadataType: MimeType<any>, dataType: MimeType<any>, resumeToken?: string | undefined, majorVersion?: number, minorVersion?: number, flags?: SetupFlag, metadata?: Metadata<any>, payload?: Payload);
+    static from(header: Header, reader: ByteReader, _: MimeType): SetupFrame;
     protected write(writer: ByteWriter): void;
     canBeIgnored(): boolean;
     hasResume(): boolean;
@@ -341,7 +275,7 @@ declare class SetupFrame extends Frame {
  */
 declare class ReservedFrame extends Frame {
     constructor(streamId: number);
-    static from(header: Header, _: ByteReader): ReservedFrame;
+    static from(header: Header, _: ByteReader, __: MimeType): ReservedFrame;
     protected write(_: ByteWriter): void;
 }
 
@@ -391,8 +325,8 @@ declare class ReservedFrame extends Frame {
 declare class LeaseFrame extends Frame {
     readonly ttl: number;
     readonly requestLimit: number;
-    constructor(ttl: number, requestLimit: number, metadata?: Metadata);
-    static from(header: Header, reader: ByteReader): LeaseFrame;
+    constructor(ttl: number, requestLimit: number, metadata?: Metadata<any>);
+    static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): LeaseFrame;
     protected write(writer: ByteWriter): void;
     canBeIgnored(): boolean;
 }
@@ -443,7 +377,7 @@ declare class LeaseFrame extends Frame {
 declare class KeepaliveFrame extends Frame {
     private readonly lastReceivedPosition;
     constructor(flags?: KeepaliveFlag, lastReceivedPosition?: bigint, payload?: Payload);
-    static from(header: Header, reader: ByteReader): KeepaliveFrame;
+    static from(header: Header, reader: ByteReader, _: MimeType): KeepaliveFrame;
     isFlagSet(flag: KeepaliveFlag): boolean;
     protected write(writer: ByteWriter): void;
     canBeIgnored(): boolean;
@@ -477,8 +411,8 @@ declare class KeepaliveFrame extends Frame {
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-request-response}
  */
 declare class RequestResponseFrame extends Frame {
-    constructor(streamId: number, flags: RequestResponseFlag, metadata?: Metadata, payload?: Payload);
-    static from(header: Header, reader: ByteReader): RequestResponseFrame;
+    constructor(streamId: number, flags: RequestResponseFlag, metadata?: Metadata<any>, payload?: Payload);
+    static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): RequestResponseFrame;
     protected write(_: ByteWriter): void;
     isFlagSet(flag: RequestResponseFlag): boolean;
     canBeIgnored(): boolean;
@@ -511,8 +445,8 @@ declare class RequestResponseFrame extends Frame {
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-fnf}
  */
 declare class RequestFireAndForgetFrame extends Frame {
-    constructor(streamId: number, flags: FireAndForgetFlag, metadata?: Metadata, payload?: Payload);
-    static from(header: Header, reader: ByteReader): RequestFireAndForgetFrame;
+    constructor(streamId: number, flags: FireAndForgetFlag, metadata?: Metadata<any>, payload?: Payload);
+    static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): RequestFireAndForgetFrame;
     protected write(_: ByteWriter): void;
     isFlagSet(flag: FireAndForgetFlag): boolean;
     canBeIgnored(): boolean;
@@ -552,8 +486,8 @@ declare class RequestFireAndForgetFrame extends Frame {
  */
 declare class RequestStreamFrame extends Frame {
     readonly request: number;
-    constructor(streamId: number, flags: RequestStreamFlag, request: number, metadata?: Metadata, payload?: Payload);
-    static from(header: Header, reader: ByteReader): RequestStreamFrame;
+    constructor(streamId: number, flags: RequestStreamFlag, request: number, metadata?: Metadata<any>, payload?: Payload);
+    static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): RequestStreamFrame;
     protected write(writer: ByteWriter): void;
     isFlagSet(flag: RequestStreamFlag): boolean;
     canBeIgnored(): boolean;
@@ -592,8 +526,8 @@ declare class RequestStreamFrame extends Frame {
  */
 declare class RequestChannelFrame extends Frame {
     readonly request: number;
-    constructor(streamId: number, flags: RequestChannelFlag, request: number, metadata?: Metadata, payload?: Payload);
-    static from(header: Header, reader: ByteReader): RequestChannelFrame;
+    constructor(streamId: number, flags: RequestChannelFlag, request: number, metadata?: Metadata<any>, payload?: Payload);
+    static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): RequestChannelFrame;
     protected write(writer: ByteWriter): void;
     isFlagSet(flag: RequestChannelFlag): boolean;
     canBeIgnored(): boolean;
@@ -629,7 +563,7 @@ declare class RequestChannelFrame extends Frame {
 declare class RequestNFrame extends Frame {
     readonly request: number;
     constructor(streamId: number, request: number);
-    static from(header: Header, reader: ByteReader): RequestNFrame;
+    static from(header: Header, reader: ByteReader, _: MimeType): RequestNFrame;
     protected write(writer: ByteWriter): void;
     canBeIgnored(): boolean;
     hasMetadata(): boolean;
@@ -654,7 +588,7 @@ declare class RequestNFrame extends Frame {
  */
 declare class CancelFrame extends Frame {
     constructor(streamId: number);
-    static from(header: Header, _: ByteReader): CancelFrame;
+    static from(header: Header, _: ByteReader, __: MimeType): CancelFrame;
     protected write(_: ByteWriter): void;
     canBeIgnored(): boolean;
     hasMetadata(): boolean;
@@ -705,8 +639,8 @@ declare class CancelFrame extends Frame {
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-payload}
  */
 declare class PayloadFrame extends Frame {
-    constructor(streamId: number, flags: PayloadFlag, metadata?: Metadata, payload?: Payload);
-    static from(header: Header, reader: ByteReader): PayloadFrame;
+    constructor(streamId: number, flags: PayloadFlag, metadata?: Metadata<any>, payload?: Payload);
+    static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): PayloadFrame;
     protected write(_: ByteWriter): void;
     isFlagSet(flag: PayloadFlag): boolean;
     canBeIgnored(): boolean;
@@ -818,7 +752,7 @@ declare namespace FrameErrorCode {
 declare class ErrorFrame extends Frame {
     protected readonly code: FrameErrorCode;
     constructor(streamId: number, code: FrameErrorCode, payload?: Payload);
-    static from(header: Header, reader: ByteReader): ErrorFrame;
+    static from(header: Header, reader: ByteReader, _: MimeType): ErrorFrame;
     protected write(writer: ByteWriter): void;
     canBeIgnored(): boolean;
     hasMetadata(): boolean;
@@ -855,8 +789,8 @@ declare class ErrorFrame extends Frame {
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-metadata-push}
  */
 declare class MetadataPushFrame extends Frame {
-    constructor(metadata: Metadata);
-    static from(_: Header, reader: ByteReader): MetadataPushFrame;
+    constructor(metadata: Metadata<any>);
+    static from(_: Header, reader: ByteReader, metadataMimeType: MimeType): MetadataPushFrame;
     protected write(_: ByteWriter): void;
     canBeIgnored(): boolean;
     hasMetadata(): boolean;
@@ -909,7 +843,7 @@ declare class ResumeFrame extends Frame {
     readonly majorVersion: number;
     readonly minorVersion: number;
     constructor(resumeToken: string, lastReceivedServerPosition: bigint, firstAvailableClientPosition: bigint, majorVersion?: number, minorVersion?: number);
-    static from(_: Header, reader: ByteReader): ResumeFrame;
+    static from(_: Header, reader: ByteReader, __: MimeType): ResumeFrame;
     protected write(writer: ByteWriter): void;
     canBeIgnored(): boolean;
     hasMetadata(): boolean;
@@ -945,7 +879,7 @@ declare class ResumeFrame extends Frame {
 declare class ResumeOkFrame extends Frame {
     readonly lastReceivedClientPosition: bigint;
     constructor(lastReceivedClientPosition: bigint);
-    static from(header: Header, reader: ByteReader): ResumeOkFrame;
+    static from(_: Header, reader: ByteReader, __: MimeType): ResumeOkFrame;
     protected write(writer: ByteWriter): void;
     canBeIgnored(): boolean;
     hasMetadata(): boolean;
@@ -989,8 +923,8 @@ declare class ResumeOkFrame extends Frame {
 declare class ExtensionFrame extends Frame {
     readonly extendedType: number;
     constructor(streamId: number, flags: ExtensionFlag, extendedType: number, // todo придумать как типизировать, возможно стоит делать через factory
-    metadata?: Metadata, payload?: Payload);
-    static from(header: Header, reader: ByteReader): ExtensionFrame;
+    metadata?: Metadata<any>, payload?: Payload);
+    static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): ExtensionFrame;
     isFlagSet(flag: ExtensionFlag): boolean;
     protected write(writer: ByteWriter): void;
 }
@@ -1011,4 +945,4 @@ declare class Connection implements RSocket {
     disconnect(): void;
 }
 
-export { CancelFrame, Connection, ErrorFrame, ExtensionFlag, ExtensionFrame, FireAndForgetFlag, Frame, FrameDeserializer, FrameFlag, FrameType, KeepaliveFlag, KeepaliveFrame, LeaseFrame, MetadataPushFrame, PayloadFlag, PayloadFrame, RequestChannelFlag, RequestChannelFrame, RequestFireAndForgetFrame, RequestNFrame, RequestResponseFlag, RequestResponseFrame, RequestStreamFlag, RequestStreamFrame, ReservedFrame, ResumeFrame, ResumeOkFrame, SetupFlag, SetupFrame, WellKnownMimeType };
+export { CancelFrame, Connection, ErrorFrame, ExtensionFlag, ExtensionFrame, FireAndForgetFlag, Frame, FrameDeserializer, FrameFlag, FrameType, KeepaliveFlag, KeepaliveFrame, LeaseFrame, Metadata, MetadataPushFrame, MimeType, PayloadFlag, PayloadFrame, RequestChannelFlag, RequestChannelFrame, RequestFireAndForgetFrame, RequestNFrame, RequestResponseFlag, RequestResponseFrame, RequestStreamFlag, RequestStreamFrame, ReservedFrame, ResumeFrame, ResumeOkFrame, SetupFlag, SetupFrame };

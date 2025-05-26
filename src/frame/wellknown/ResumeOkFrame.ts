@@ -2,6 +2,7 @@ import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
+import {MimeType} from "@/mimetype";
 
 /**
  * #### RESUME_OK Frame (0x0E)
@@ -36,7 +37,7 @@ export class ResumeOkFrame extends Frame {
     ) {
         super(FrameType.RESUME_OK, 0);
     }
-    public static from(header: Header, reader: ByteReader): ResumeOkFrame {
+    public static from(_: Header, reader: ByteReader, __: MimeType): ResumeOkFrame {
         return new ResumeOkFrame(reader.i64())
     }
 
