@@ -1,16 +1,16 @@
 import bebyte, {ByteReader} from "bebyte";
 import {decode, encode} from "@/utils";
-import {Metadata, MimeType} from "@/mimetype/MimeType";
-import {WellKnownMimeType} from "@/mimetype";
+import {MimeType} from "@/mimetype/MimeType";
+import {Metadata} from "@/frame/context/Metadata";
 
 export class RSocketComposite extends MimeType<Array<Metadata<any>>> {
-    public toMetadata(payloads: Array<Metadata<any>>): Metadata<Array<Metadata<any>>> {
-        return new class _ extends Metadata<Array<Metadata<any>>> {
+    protected serializeMetadata(payloads: Array<Metadata<any>>): Metadata<Array<Metadata<any>>> {
+        return new class RSocketCompositeMetadata extends Metadata<Array<Metadata<any>>> {
             public toUint8Array(): Uint8Array {
                 return payloads.reduce((acc, payload) => {
-                    if (payload.isWellKnown) acc.i8(128 | payload.identifier!)
+                    if (payload.mimeType.isWellKnown) acc.i8(128 | payload.mimeType.identifier!)
                     else {
-                        const type = encode(payload.mimeType)
+                        const type = encode(payload.mimeType.mimeType)
                         acc.i7(type.length)
                         acc.write(type)
                     }
@@ -18,20 +18,20 @@ export class RSocketComposite extends MimeType<Array<Metadata<any>>> {
                     return acc
                 }, bebyte.writer()).toUint8Array()
             }
-        }(this.mimeType, this.identifier, payloads)
+        }(this, payloads)
     }
 
-    public readMetadata(reader: ByteReader, hasPayload: boolean = true): Metadata<Array<Metadata<any>>> {
-        const array = super.readMetadata(reader, hasPayload).toUint8Array()
+    protected deserializeMetadata(payloads: ByteReader, hasPayload: boolean = true): Metadata<Array<Metadata<any>>> {
+        const array = hasPayload ? payloads.read(payloads.i24()) : payloads.readRemaining();
         const buffer = bebyte.reader(array);
-        const payloads: Array<Metadata<any>> = []
+        const deserialized: Array<Metadata<any>> = []
         while (buffer.offset < array.length) {
             const i8 = buffer.i8()
             const i7 = i8 & 0x7F
-            const mimeType = i8 >> 7 ? MimeType.valueOf(i7) : WellKnownMimeType.valueOf(decode(buffer.read(i7)))
+            const mimeType = i8 >> 7 ? MimeType.valueOf(i7) : MimeType.valueOf(decode(buffer.read(i7)))
             const data = bebyte.reader(buffer.read(buffer.i24()))
-            payloads.push(new Metadata<any>(mimeType.mimeType, mimeType.identifier, mimeType.readMetadata(data, true)))
+            deserialized.push(new Metadata<any>(mimeType, mimeType.toMetadata(data, true)))
         }
-        return new Metadata(this.mimeType, this.identifier, payloads)
+        return new Metadata(this, deserialized)
     }
 }

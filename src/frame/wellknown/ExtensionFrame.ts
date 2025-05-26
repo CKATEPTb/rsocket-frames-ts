@@ -2,10 +2,11 @@ import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {FrameErrorCode} from "@/frame/FrameErrorCode";
-import Payload from "@/frame/context/Payload";
 import Header from "@/frame/context/Header";
 import {ExtensionFlag} from "@/frame";
-import {Metadata, MimeType, WellKnownMimeType} from "@/mimetype";
+import {MimeType, WellKnownMimeType} from "@/mimetype";
+import {Metadata} from "@/frame/context/Metadata";
+import {Payload} from "@/frame/context/Payload";
 
 /**
  * ### EXT (Extension) Frame (0x3F)
@@ -48,18 +49,18 @@ export class ExtensionFrame extends Frame {
         flags: ExtensionFlag,
         public readonly extendedType: number, // todo придумать как типизировать, возможно стоит делать через factory
         metadata?: Metadata<any>,
-        payload?: Payload
+        payload?: Payload<any>
     ) {
         super(FrameType.EXT, streamId, flags, metadata, payload);
     }
 
-    public static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): ExtensionFrame {
+    public static from(header: Header, reader: ByteReader, metadataType: MimeType, payloadType: MimeType): ExtensionFrame {
         return new ExtensionFrame(
             header.streamId,
             header.flags,
             FrameErrorCode.fromByte(reader.i32()),
-            header.isFlagSet(ExtensionFlag.METADATA) ? metadataMimeType.readMetadata(reader) : undefined,
-            Payload.from(reader)
+            header.isFlagSet(ExtensionFlag.METADATA) ? metadataType.toMetadata(reader) : undefined,
+            payloadType.toPayload(reader)
         )
     }
 

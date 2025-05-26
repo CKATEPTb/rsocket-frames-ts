@@ -56,7 +56,7 @@ export class ResumeFrame extends Frame {
         super(FrameType.RESUME, 0)
     }
 
-    public static from(_: Header, reader: ByteReader, __: MimeType): ResumeFrame {
+    public static from(_: Header, reader: ByteReader, __: MimeType, ___: MimeType): ResumeFrame {
         const major = reader.i16()
         const minor = reader.i16()
         const resumeToken = decode(reader.read(reader.i16()))

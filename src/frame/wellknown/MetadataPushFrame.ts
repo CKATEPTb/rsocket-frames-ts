@@ -3,7 +3,8 @@ import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {FrameFlag} from "@/frame";
 import Header from "@/frame/context/Header";
-import {Metadata, MimeType} from "@/mimetype";
+import {MimeType} from "@/mimetype";
+import {Metadata} from "@/frame/context/Metadata";
 
 /**
  * ### METADATA_PUSH Frame (0x0C)
@@ -40,8 +41,8 @@ export class MetadataPushFrame extends Frame {
         super(FrameType.METADATA_PUSH, 0, FrameFlag.METADATA, metadata, undefined);
     }
 
-    public static from(_: Header, reader: ByteReader, metadataMimeType: MimeType): MetadataPushFrame {
-        return new MetadataPushFrame(metadataMimeType.readMetadata(reader, false))
+    public static from(_: Header, reader: ByteReader, metadataType: MimeType, __: MimeType): MetadataPushFrame {
+        return new MetadataPushFrame(metadataType.toMetadata(reader, false))
     }
 
     protected write(_: ByteWriter) {

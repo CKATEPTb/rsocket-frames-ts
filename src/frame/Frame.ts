@@ -1,10 +1,10 @@
 import Header from "@/frame/context/Header";
-import Payload from "@/frame/context/Payload";
+import {Payload} from "@/frame/context/Payload";
 import {FrameType} from "@/frame/FrameType";
 import {FrameFlag} from "@/frame/FrameFlag";
 import {FrameWriter} from "@/frame/FrameWriter";
 import bebyte from "bebyte";
-import {Metadata} from "@/mimetype";
+import {Metadata} from "@/frame/context/Metadata";
 
 export abstract class Frame extends FrameWriter {
     protected readonly header: Header
@@ -13,8 +13,8 @@ export abstract class Frame extends FrameWriter {
         type: FrameType,
         streamId: number,
         flags: FrameFlag = FrameFlag.NONE,
-        public readonly metadata?: Metadata,
-        public readonly payload?: Payload
+        public readonly metadata?: Metadata<any>,
+        public readonly payload?: Payload<any>
     ) {
         super()
         this.header = new Header(

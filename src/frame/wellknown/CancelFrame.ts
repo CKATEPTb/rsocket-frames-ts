@@ -26,7 +26,7 @@ export class CancelFrame extends Frame {
         super(FrameType.CANCEL, streamId);
     }
 
-    public static from(header: Header, _: ByteReader, __: MimeType): CancelFrame {
+    public static from(header: Header, _: ByteReader, __: MimeType, ___: MimeType): CancelFrame {
         return new CancelFrame(header.streamId)
     }
 

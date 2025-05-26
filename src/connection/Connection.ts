@@ -10,9 +10,8 @@ import {
     SetupFrame
 } from "@/frame";
 import {Flux, ManySink, Mono, Sinks} from "@ckateptb/reactive-core-js";
+import {WellKnownMimeType} from "@/mimetype";
 import {encode} from "@/utils";
-import Payload from "@/frame/context/Payload";
-import {Metadata, MimeType, WellKnownAuthType, WellKnownMimeType} from "@/mimetype";
 
 class StreamIdSupplier {
     public constructor(private init: number) {
@@ -74,7 +73,7 @@ export class Connection implements RSocket {
             console.error('close', ev)
         }
         this.websocket.onmessage = msg => {
-            this.callbacks.next(FrameDeserializer.deserialize(new Uint8Array(msg.data), WellKnownMimeType.APPLICATION_JSON))
+            this.callbacks.next(FrameDeserializer.deserialize(new Uint8Array(msg.data), WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, WellKnownMimeType.APPLICATION_JSON))
         }
     }
 
@@ -91,7 +90,7 @@ export class Connection implements RSocket {
                     streamId,
                     FireAndForgetFlag.NONE,
                     WellKnownMimeType.MESSAGE_RSOCKET_ROUTING.toMetadata(['fnf']),
-                    new Payload(encode(JSON.stringify(value)))
+                    WellKnownMimeType.APPLICATION_JSON.toPayload(encode(JSON.stringify(value)))
                 ))
                 sink.complete()
             }

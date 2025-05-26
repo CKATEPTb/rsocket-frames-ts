@@ -1,8 +1,5 @@
-import {FireAndForgetFlag, FrameDeserializer, KeepaliveFrame, RequestFireAndForgetFrame} from "@/frame";
-import {KeepaliveFlag} from "@/frame/FrameFlag";
-import {decode, encode} from "@/utils";
-import Payload from "@/frame/context/Payload";
-import {Metadata, WellKnownMimeType} from "@/mimetype";
+import {FireAndForgetFlag, FrameDeserializer, RequestFireAndForgetFrame} from "@/frame";
+import {WellKnownMimeType} from "@/mimetype";
 
 function toHexString(byteArray: Uint8Array) {
     return Array.from(byteArray, function (byte) {
@@ -14,14 +11,14 @@ const arr = new RequestFireAndForgetFrame(
     1,
     FireAndForgetFlag.NONE,
     WellKnownMimeType.MESSAGE_RSOCKET_ROUTING.toMetadata(['fnf']),
-    new Payload(encode(JSON.stringify({
+    WellKnownMimeType.APPLICATION_JSON.toPayload({
         num: 1
-    })))
+    })
 ).toUint8Array()
 console.log(toHexString(arr))
 
-const frame = FrameDeserializer.deserialize(arr, WellKnownMimeType.APPLICATION_JSON) as RequestFireAndForgetFrame
-console.log(frame, decode(frame.metadata?.payload), decode(frame.payload?.data))
+const frame = FrameDeserializer.deserialize(arr, WellKnownMimeType.MESSAGE_RSOCKET_ROUTING, WellKnownMimeType.APPLICATION_JSON) as RequestFireAndForgetFrame
+console.log(frame)
 //          +-------------------------------------------------+
 //          |  0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f |
 // +--------+-------------------------------------------------+----------------+

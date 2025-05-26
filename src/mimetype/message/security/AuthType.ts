@@ -1,5 +1,4 @@
 import {ByteReader, ByteWriter} from "bebyte";
-import {decode, encode} from "@/utils";
 
 export abstract class AuthType<T> {
     private static _values: Map<string, AuthType<any>> = new Map();
@@ -16,7 +15,7 @@ export abstract class AuthType<T> {
 
     public abstract read(reader: ByteReader): T
 
-    public data(data: T): { authType: AuthType<T>, data: T } {
+    public auth(data: T): { authType: AuthType<T>, data: T } {
         return {
             authType: this,
             data: data
@@ -35,35 +34,5 @@ export abstract class AuthType<T> {
                     writer.write(data)
                 }
             }(String(authType));
-    }
-}
-
-export class SimpleAuthType extends AuthType<{
-    username: string,
-    password: string
-}> {
-    public read(reader: ByteReader): { username: string; password: string } {
-        return {
-            username: decode(reader.read(reader.i16())),
-            password: decode(reader.readRemaining())
-        }
-    }
-
-    public write(writer: ByteWriter, data: { username: string; password: string }): void {
-        const username = encode(data.username)
-        writer.i16(username.length)
-        writer.write(username)
-        writer.write(encode(data.password))
-    }
-
-}
-
-export class BearerAuthType extends AuthType<string> {
-    public read(reader: ByteReader): string {
-        return decode(reader.readRemaining());
-    }
-
-    public write(writer: ByteWriter, data: string): void {
-        writer.write(encode(data))
     }
 }

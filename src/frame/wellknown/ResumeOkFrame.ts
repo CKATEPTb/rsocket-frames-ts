@@ -37,7 +37,7 @@ export class ResumeOkFrame extends Frame {
     ) {
         super(FrameType.RESUME_OK, 0);
     }
-    public static from(_: Header, reader: ByteReader, __: MimeType): ResumeOkFrame {
+    public static from(_: Header, reader: ByteReader, __: MimeType, ___: MimeType): ResumeOkFrame {
         return new ResumeOkFrame(reader.i64())
     }
 

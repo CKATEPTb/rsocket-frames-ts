@@ -1,11 +1,11 @@
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {FrameErrorCode} from "@/frame/FrameErrorCode";
-import Payload from "@/frame/context/Payload";
 import bebyte, {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
 import {FrameFlag} from "@/frame";
 import {MimeType} from "@/mimetype";
+import {Payload} from "@/frame/context/Payload";
 
 /**
  * ### ERROR Frame (0x0B)
@@ -70,16 +70,16 @@ export class ErrorFrame extends Frame {
     constructor(
         streamId: number,
         protected readonly code: FrameErrorCode,
-        payload?: Payload
+        payload?: Payload<any>
     ) {
         super(FrameType.ERROR, streamId, FrameFlag.NONE, undefined, payload);
     }
 
-    public static from(header: Header, reader: ByteReader, _: MimeType): ErrorFrame {
+    public static from(header: Header, reader: ByteReader, _: MimeType, payloadType: MimeType): ErrorFrame {
         return new ErrorFrame(
             header.streamId,
             FrameErrorCode.fromByte(reader.i32()),
-            Payload.from(bebyte.reader(reader.readRemaining()))
+            payloadType.toPayload(reader.readRemaining())
         )
     }
 

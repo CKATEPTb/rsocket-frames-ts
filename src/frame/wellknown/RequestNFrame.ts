@@ -37,7 +37,7 @@ export class RequestNFrame extends Frame {
         super(FrameType.REQUEST_N, streamId);
     }
 
-    public static from(header: Header, reader: ByteReader, _: MimeType): RequestNFrame {
+    public static from(header: Header, reader: ByteReader, _: MimeType, __: MimeType): RequestNFrame {
         return new RequestNFrame(
             header.streamId,
             reader.i32()

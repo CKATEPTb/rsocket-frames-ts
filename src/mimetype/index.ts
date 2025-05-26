@@ -1,13 +1,14 @@
-import {Metadata, MimeType} from "@/mimetype/MimeType";
+import {MimeType} from "@/mimetype/MimeType";
 import {RSocketMimeType, RSocketMimeTypes} from "@/mimetype/message/RSocketMimeType";
 import {RSocketRouting} from "@/mimetype/message/RSocketRouting";
 import {RSocketComposite} from "@/mimetype/message/RSocketComposite";
 import {RSocketTracingZipkin} from "@/mimetype/message/RSocketTracingZipkin";
 import {RSocketAuth} from "@/mimetype/message/security/RSocketAuth";
-import {WellKnownAuthType} from "@/mimetype/message/security";
+import {AuthType, WellKnownAuthType} from "@/mimetype/message/security";
+import {ApplicationJson} from "@/mimetype/application/ApplicationJson";
 
 export {
-    MimeType, Metadata, WellKnownAuthType
+    MimeType, WellKnownAuthType, AuthType
 }
 
 export namespace WellKnownMimeType {
@@ -16,7 +17,7 @@ export namespace WellKnownMimeType {
     export const APPLICATION_GRAPHQL = new MimeType('application/graphql', 0x02)
     export const APPLICATION_GZIP = new MimeType('application/gzip', 0x03)
     export const APPLICATION_JAVASCRIPT = new MimeType('application/javascript', 0x04)
-    export const APPLICATION_JSON = new MimeType('application/json', 0x05)
+    export const APPLICATION_JSON = new ApplicationJson('application/json', 0x05)
     export const APPLICATION_OCTET_STREAM = new MimeType('application/octet-stream', 0x06)
     export const APPLICATION_PDF = new MimeType('application/pdf', 0x07)
     export const APPLICATION_THRIFT = new MimeType('application/vnd.apache.thrift.binary', 0x08)
@@ -58,5 +59,4 @@ export namespace WellKnownMimeType {
     export const MESSAGE_RSOCKET_TRACING_ZIPKIN = new RSocketTracingZipkin('message/x.rsocket.tracing-zipkin.v0', 0x7D)
     export const MESSAGE_RSOCKET_ROUTING = new RSocketRouting('message/x.rsocket.routing.v0', 0x7E)
     export const MESSAGE_RSOCKET_COMPOSITE_METADATA = new RSocketComposite('message/x.rsocket.composite-metadata.v0', 0x7F)
-    export const valueOf = MimeType.valueOf
 }

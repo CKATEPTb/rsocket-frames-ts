@@ -16,7 +16,7 @@ export class ReservedFrame extends Frame {
         throw new Error("Reserved frame could not be created!")
     }
 
-    public static from(header: Header, _: ByteReader, __: MimeType): ReservedFrame {
+    public static from(header: Header, _: ByteReader, __: MimeType, ___: MimeType): ReservedFrame {
         return new ReservedFrame(header.streamId)
     }
 

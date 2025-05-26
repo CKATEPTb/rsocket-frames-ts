@@ -2,9 +2,10 @@ import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {RequestResponseFlag} from "@/frame";
-import Payload from "@/frame/context/Payload";
+import {Payload} from "@/frame/context/Payload";
 import Header from "@/frame/context/Header";
-import {Metadata, MimeType} from "@/mimetype";
+import {MimeType} from "@/mimetype";
+import {Metadata} from "@/frame/context/Metadata";
 
 /**
  * ### REQUEST_RESPONSE Frame (0x04)
@@ -36,17 +37,17 @@ export class RequestResponseFrame extends Frame {
         streamId: number,
         flags: RequestResponseFlag,
         metadata?: Metadata<any>,
-        payload?: Payload
+        payload?: Payload<any>
     ) {
         super(FrameType.REQUEST_RESPONSE, streamId, flags, metadata, payload);
     }
 
-    public static from(header: Header, reader: ByteReader, metadataMimeType: MimeType): RequestResponseFrame {
+    public static from(header: Header, reader: ByteReader, metadataType: MimeType, payloadType: MimeType): RequestResponseFrame {
         return new RequestResponseFrame(
             header.streamId,
             header.flags,
-            header.isFlagSet(RequestResponseFlag.METADATA) ? metadataMimeType.readMetadata(reader) : undefined,
-            Payload.from(reader)
+            header.isFlagSet(RequestResponseFlag.METADATA) ? metadataType.toMetadata(reader) : undefined,
+            payloadType.toPayload(reader)
         )
     }
 

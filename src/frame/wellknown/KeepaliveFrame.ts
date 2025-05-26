@@ -1,6 +1,6 @@
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import Payload from "@/frame/context/Payload";
+import {Payload} from "@/frame/context/Payload";
 import {ByteReader, ByteWriter} from "bebyte";
 import Header from "@/frame/context/Header";
 import {KeepaliveFlag} from "@/frame";
@@ -53,16 +53,16 @@ export class KeepaliveFrame extends Frame {
     constructor(
         flags: KeepaliveFlag = KeepaliveFlag.NONE,
         private readonly lastReceivedPosition: bigint = 0n,
-        payload?: Payload
+        payload?: Payload<any>
     ) {
         super(FrameType.KEEPALIVE, 0, flags, undefined, payload);
     }
 
-    public static from(header: Header, reader: ByteReader, _: MimeType): KeepaliveFrame {
+    public static from(header: Header, reader: ByteReader, _: MimeType, payloadType: MimeType): KeepaliveFrame {
         return new KeepaliveFrame(
             header.flags,
             reader.i64(),
-            Payload.from(reader)
+            payloadType.toPayload(reader)
         )
     }
 

@@ -1,10 +1,12 @@
 import bebyte, {ByteReader} from "bebyte";
 import {decode, encode} from "@/utils";
-import {Metadata, MimeType} from "@/mimetype/MimeType";
+import {MimeType} from "@/mimetype/MimeType";
+import {Metadata} from "@/frame/context/Metadata";
 
 export class RSocketMimeType extends MimeType<MimeType> {
-    public toMetadata(payload: MimeType): Metadata<MimeType> {
-        return new class _ extends Metadata<MimeType> {
+
+    protected serializeMetadata(payload: MimeType): Metadata<MimeType> {
+        return new class RSocketMimeTypeMetadata extends Metadata<MimeType> {
             public toUint8Array(): Uint8Array {
                 const writer = bebyte.writer()
                 if (payload.isWellKnown) writer.i8(128 | payload.identifier!)
@@ -15,21 +17,22 @@ export class RSocketMimeType extends MimeType<MimeType> {
                 }
                 return writer.toUint8Array()
             }
-        }(this.mimeType, this.identifier, payload)
+        }(this, payload)
     }
 
-    public readMetadata(reader: ByteReader, hasPayload: boolean = true): Metadata<MimeType> {
-        const array = super.readMetadata(reader, hasPayload).toUint8Array()
+    protected deserializeMetadata(payload: ByteReader, hasPayload: boolean = true): Metadata<MimeType> {
+        const array = hasPayload ? payload.read(payload.i24()) : payload.readRemaining();
         const buffer = bebyte.reader(array);
         const i8 = buffer.i8()
         const i7 = i8 & 0x7F
-        return new Metadata(this.mimeType, this.identifier, (i8 >> 7 ? MimeType.valueOf(i7) : new MimeType(decode(buffer.read(i7)))))
+        return new Metadata(this, (i8 >> 7 ? MimeType.valueOf(i7) : new MimeType(decode(buffer.read(i7)))))
     }
+
 }
 
 export class RSocketMimeTypes extends MimeType<Array<MimeType>> {
-    public toMetadata(payloads: Array<MimeType>): Metadata<Array<MimeType>> {
-        return new class _ extends Metadata<Array<MimeType>> {
+    protected serializeMetadata(payloads: Array<MimeType>): Metadata<Array<MimeType>> {
+        return new class RSocketMimeTypesMetadata extends Metadata<Array<MimeType>> {
             public toUint8Array(): Uint8Array {
                 return payloads.reduce((acc, payload) => {
                     if (payload.isWellKnown) acc.i8(128 | payload.identifier!)
@@ -41,11 +44,11 @@ export class RSocketMimeTypes extends MimeType<Array<MimeType>> {
                     return acc
                 }, bebyte.writer()).toUint8Array()
             }
-        }(this.mimeType, this.identifier, payloads)
+        }(this, payloads)
     }
 
-    public readMetadata(reader: ByteReader, hasPayload: boolean = true): Metadata<Array<MimeType>> {
-        const array = super.readMetadata(reader, hasPayload).toUint8Array()
+    protected deserializeMetadata(reader: ByteReader, hasPayload: boolean = true): Metadata<Array<MimeType>> {
+        const array = hasPayload ? reader.read(reader.i24()) : reader.readRemaining();
         const buffer = bebyte.reader(array);
         const payloads: Array<MimeType> = []
         while (buffer.offset < array.length) {
@@ -53,6 +56,6 @@ export class RSocketMimeTypes extends MimeType<Array<MimeType>> {
             const i7 = i8 & 0x7F
             payloads.push(i8 >> 7 ? MimeType.valueOf(i7) : new MimeType(decode(buffer.read(i7))))
         }
-        return new Metadata(this.mimeType, this.identifier, payloads)
+        return new Metadata(this, payloads)
     }
 }

@@ -1,11 +1,12 @@
 import {Frame} from "@/frame/Frame";
-import Payload from "@/frame/context/Payload";
+import {Payload} from "@/frame/context/Payload";
 import {FrameType} from "@/frame/FrameType";
 import {decode, encode} from "@/utils";
-import {Metadata, MimeType} from "@/mimetype/MimeType";
+import {MimeType} from "@/mimetype/MimeType";
 import {ByteReader, ByteWriter} from "bebyte";
 import {ExtensionFlag, SetupFlag} from "@/frame";
 import Header from "@/frame/context/Header";
+import {Metadata} from "@/frame/context/Metadata";
 
 /**
  * ### SETUP Frame (0x01)
@@ -89,13 +90,13 @@ export class SetupFrame extends Frame {
         public readonly minorVersion: number = 0,
         flags: SetupFlag = SetupFlag.NONE,
         metadata?: Metadata<any>,
-        payload?: Payload
+        payload?: Payload<any>
     ) {
         flags = SetupFlag.combine(flags, resumeToken != undefined ? SetupFlag.RESUME : SetupFlag.NONE)
         super(FrameType.SETUP, 0, flags, metadata, payload)
     }
 
-    public static from(header: Header, reader: ByteReader, _: MimeType): SetupFrame {
+    public static from(header: Header, reader: ByteReader, _: MimeType, __: MimeType): SetupFrame {
         const major = reader.i16()
         const minor = reader.i16()
         const keepalive = reader.i32()
@@ -103,8 +104,8 @@ export class SetupFrame extends Frame {
         const resumeToken = header.isFlagSet(SetupFlag.RESUME) ? decode(reader.read(reader.i16())) : undefined
         const metadataType = MimeType.valueOf(decode(reader.read(reader.i8())))
         const dataType = MimeType.valueOf(decode(reader.read(reader.i8())))
-        const metadata = header.isFlagSet(ExtensionFlag.METADATA) ? metadataType.readMetadata(reader) : undefined
-        const payload = Payload.from(reader)
+        const metadata = header.isFlagSet(ExtensionFlag.METADATA) ? metadataType.toMetadata(reader) : undefined
+        const payload = dataType.toPayload(reader)
         return new SetupFrame(keepalive, lifetime, metadataType, dataType, resumeToken, major, minor, header.flags, metadata, payload)
     }
 

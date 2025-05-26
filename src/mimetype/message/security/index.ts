@@ -1,4 +1,6 @@
-import {AuthType, BearerAuthType, SimpleAuthType} from "@/mimetype/message/security/AuthType";
+import {AuthType} from "@/mimetype/message/security/AuthType";
+import {SimpleAuthType} from "@/mimetype/message/security/SimpleAuthType";
+import {BearerAuthType} from "@/mimetype/message/security/BearerAuthType";
 
 export {
     AuthType
