@@ -129,10 +129,10 @@ pnpm run build
 
 ### This project is licensed under the LGPL-3.0-only License.
 
-See the LICENSE.md file for details.
+See the [LICENSE.md](LICENSE.md) file for details.
 
 ## Author
 
-### [CKATEPTb](https://github.com/CKATEPTb), [fakeivchenko](https://github.com/FakeIvchenko)
+### [CKATEPTb](https://github.com/CKATEPTb), [fakeivchenko](https://github.com/fakeivchenko)
 
 Feel free to open issues and submit pull requests to improve the library!
