@@ -4,7 +4,7 @@ import {ByteReader, ByteWriter} from "bebyte";
 import {FrameErrorCode} from "@/frame/FrameErrorCode";
 import Header from "@/frame/context/Header";
 import {ExtensionFlag} from "@/frame";
-import {MimeType, WellKnownMimeType} from "@/mimetype";
+import {MimeType} from "@/mimetype";
 import {Metadata} from "@/frame/context/Metadata";
 import {Payload} from "@/frame/context/Payload";
 
