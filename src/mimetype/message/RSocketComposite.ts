@@ -29,8 +29,7 @@ export class RSocketComposite extends MimeType<Array<Metadata<any>>> {
             const i8 = buffer.i8()
             const i7 = i8 & 0x7F
             const mimeType = i8 >> 7 ? MimeType.valueOf(i7) : MimeType.valueOf(decode(buffer.read(i7)))
-            const data = bebyte.reader(buffer.read(buffer.i24()))
-            deserialized.push(new Metadata<any>(mimeType, mimeType.toMetadata(data, true)))
+            deserialized.push(mimeType.toMetadata(buffer, true))
         }
         return new Metadata(this, deserialized)
     }
