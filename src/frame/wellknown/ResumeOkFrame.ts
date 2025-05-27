@@ -1,8 +1,8 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
-import Header from "@/frame/context/Header";
-import {MimeType} from "@/mimetype";
+import {Header} from "@/frame/context/Header";
+import {MimeType} from "@/mimetype/MimeType";
 
 /**
  * #### RESUME_OK Frame (0x0E)
@@ -32,23 +32,53 @@ import {MimeType} from "@/mimetype";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-resume-ok}
  */
 export class ResumeOkFrame extends Frame {
+    /**
+     * @param {bigint} lastReceivedClientPosition - The last position (in bytes) the server received from the client before disconnection.
+     */
     public constructor(
         public readonly lastReceivedClientPosition: bigint
     ) {
         super(FrameType.RESUME_OK, 0);
     }
+
+    /**
+     * Creates a `ResumeOkFrame` instance from a binary stream.
+     *
+     * @param {Header} _ - Parsed header (unused, must be type RESUME_OK).
+     * @param {ByteReader} reader - Binary reader positioned at frame body.
+     * @param {MimeType} __ - Metadata MIME type (ignored for this frame).
+     * @param {MimeType} ___ - Payload MIME type (ignored for this frame).
+     * @returns {ResumeOkFrame} Parsed frame instance.
+     */
     public static from(_: Header, reader: ByteReader, __: MimeType, ___: MimeType): ResumeOkFrame {
         return new ResumeOkFrame(reader.i64())
     }
 
+    /**
+     * Serializes the frame body into a binary writer.
+     *
+     * Writes a single 63-bit unsigned integer representing the client's last acknowledged position.
+     *
+     * @param {ByteWriter} writer - Writer to output binary data.
+     */
     protected write(writer: ByteWriter) {
         writer.i63(this.lastReceivedClientPosition)
     }
 
+    /**
+     * `RESUME_OK` frames must never be ignored.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false;
     }
 
+    /**
+     * `RESUME_OK` frames do not contain metadata.
+     *
+     * @returns {false}
+     */
     public hasMetadata(): boolean {
         return false;
     }

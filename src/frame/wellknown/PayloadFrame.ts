@@ -1,9 +1,9 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
-import {PayloadFlag} from "@/frame";
-import Header from "@/frame/context/Header";
-import {MimeType} from "@/mimetype";
+import {PayloadFlag} from "@/frame/FrameFlag";
+import {Header} from "@/frame/context/Header";
+import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
 import {Payload} from "@/frame/context/Payload";
 
@@ -52,6 +52,14 @@ import {Payload} from "@/frame/context/Payload";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-payload}
  */
 export class PayloadFrame extends Frame {
+    /**
+     * Constructs a new `PayloadFrame`.
+     *
+     * @param {number} streamId - The stream ID this frame belongs to.
+     * @param {PayloadFlag} flags - Flags (NEXT, COMPLETE, METADATA, FOLLOWS).
+     * @param {Metadata<any>} [metadata] - Optional metadata.
+     * @param {Payload<any>} [payload] - Optional payload.
+     */
     public constructor(
         streamId: number,
         flags: PayloadFlag,
@@ -61,6 +69,15 @@ export class PayloadFrame extends Frame {
         super(FrameType.PAYLOAD, streamId, flags, metadata, payload);
     }
 
+    /**
+     * Parses a `PayloadFrame` from binary data.
+     *
+     * @param {Header} header - The frame header.
+     * @param {ByteReader} reader - The byte reader positioned at the payload.
+     * @param {MimeType} metadataType - Metadata MIME type.
+     * @param {MimeType} payloadType - Payload MIME type.
+     * @returns {PayloadFrame} The parsed payload frame.
+     */
     public static from(header: Header, reader: ByteReader, metadataType: MimeType, payloadType: MimeType): PayloadFrame {
         return new PayloadFrame(
             header.streamId,
@@ -70,25 +87,52 @@ export class PayloadFrame extends Frame {
         )
     }
 
+    /**
+     * Writes the frame-specific body to the writer.
+     * PAYLOAD has no fixed header fields beyond metadata/payload.
+     *
+     * @param {ByteWriter} _ - Writer (unused here).
+     */
     protected write(_: ByteWriter) {
     }
 
+    /**
+     * Checks if the specified flag is set.
+     *
+     * @param {PayloadFlag} flag - The flag to check.
+     * @returns {boolean} `true` if the flag is set.
+     */
     public isFlagSet(flag: PayloadFlag): boolean {
         return super.isFlagSet(flag)
     }
 
+    /**
+     * Indicates that PAYLOAD frames must never be ignored.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false;
     }
 
+    /**
+     * Returns `true` if the `FOLLOWS` flag is set,
+     * meaning more fragments are expected.
+     */
     public hasFollows() {
         return this.isFlagSet(PayloadFlag.FOLLOWS)
     }
 
+    /**
+     * Returns `true` if this frame signals stream completion.
+     */
     public isComplete() {
         return this.isFlagSet(PayloadFlag.COMPLETE)
     }
 
+    /**
+     * Returns `true` if this frame contains an application payload.
+     */
     public isNext() {
         return this.isFlagSet(PayloadFlag.NEXT)
     }

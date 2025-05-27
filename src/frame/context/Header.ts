@@ -28,7 +28,14 @@ import {FrameWriter} from "@/frame/FrameWriter";
  *
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-header-format}
  */
-export default class Header extends FrameWriter {
+export class Header extends FrameWriter {
+    /**
+     * Creates a new RSocket `Header` instance.
+     *
+     * @param {FrameType} frameType - Type of the frame (6 bits).
+     * @param {number} streamId - Stream ID this frame is associated with (must be a 31-bit unsigned int).
+     * @param {FrameFlag} flags - Bitmask of frame flags (10 bits max).
+     */
     constructor(
         public readonly frameType: FrameType,  // (31 bits = max value 2^31-1 = 2,147,483,647) Unsigned 31-bit integer representing the stream Identifier for this frame or 0 to indicate the entire connection.
         public readonly streamId: number, // 6 bits = max value 63) Type of Frame.
@@ -37,6 +44,12 @@ export default class Header extends FrameWriter {
         super()
     }
 
+    /**
+     * Deserializes a `Header` from the binary reader.
+     *
+     * @param {ByteReader} reader - Byte stream reader positioned at the start of the frame.
+     * @returns {Header} Parsed frame header.
+     */
     public static from(reader: ByteReader): Header {
         const streamId = reader.i32()
         const frameTypeAndFlagsByte = reader.i16()
@@ -45,10 +58,21 @@ export default class Header extends FrameWriter {
         return new Header(frameType, streamId, flags)
     }
 
+    /**
+     * Checks if a specific flag is set.
+     *
+     * @param {FrameFlag} flag - Flag to check.
+     * @returns {boolean} True if the flag is set.
+     */
     public isFlagSet(flag: FrameFlag): boolean {
         return (this.flags & flag) == flag
     }
 
+    /**
+     * Serializes this header to the binary writer.
+     *
+     * @param {ByteWriter} writer - Writer to serialize to.
+     */
     public write(writer: ByteWriter): void {
         writer.i31(this.streamId) // streamId
         writer.i16(

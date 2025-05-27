@@ -2,15 +2,40 @@ import {ByteWriter} from "bebyte";
 import {MimeType} from "@/mimetype";
 import {FrameWriter} from "@/frame/FrameWriter";
 
+/**
+ * Represents a metadata frame in RSocket protocol.
+ *
+ * This class encapsulates metadata information, including its MIME type and payload,
+ * and provides methods to serialize it into binary format for transmission.
+ *
+ * @template T - The type of the metadata payload, defaults to `Uint8Array`.
+ */
 export class Metadata<T = Uint8Array> extends FrameWriter {
+    /**
+     * Creates a new [Metadata]{@link Metadata} instance.
+     *
+     * @param mimeType - The MIME type describing the format of the metadata.
+     * @param payload - The actual metadata payload.
+     */
     public constructor(public readonly mimeType: MimeType<T>, public readonly payload: T) {
         super()
     }
 
+    /**
+     * Converts the metadata payload to a [Uint8Array]{@link Uint8Array}.
+     *
+     * @returns The metadata payload as a [Uint8Array]{@link Uint8Array}.
+     */
     public toUint8Array(): Uint8Array {
         return this.payload as Uint8Array
     }
 
+    /**
+     * Serializes the metadata and writes it to the given [ByteWriter]{@link ByteWriter}.
+     *
+     * @param writer - The byte writer to which the metadata will be written.
+     * @param hasPayload - Indicates whether to write the payload length prefix (defaults to `true`).
+     */
     public write(writer: ByteWriter, hasPayload: boolean = true) {
         const array = this.toUint8Array()
         if (hasPayload) writer.i24(array.length)

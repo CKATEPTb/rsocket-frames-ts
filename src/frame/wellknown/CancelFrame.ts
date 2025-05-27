@@ -1,8 +1,8 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
-import Header from "@/frame/context/Header";
-import {MimeType} from "@/mimetype";
+import {Header} from "@/frame/context/Header";
+import {MimeType} from "@/mimetype/MimeType";
 
 /**
  * ### CANCEL Frame (0x09)
@@ -22,21 +22,51 @@ import {MimeType} from "@/mimetype";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-cancel}
  */
 export class CancelFrame extends Frame {
+    /**
+     * Constructs a `CancelFrame` for the given stream.
+     *
+     * @param {number} streamId - Stream ID to cancel (must be > 0).
+     */
     public constructor(streamId: number) {
         super(FrameType.CANCEL, streamId);
     }
 
+    /**
+     * Parses a `CancelFrame` from the header.
+     *
+     * @param {Header} header - Frame header (must have type `CANCEL`).
+     * @param {ByteReader} _ - Reader (ignored, as this frame has no body).
+     * @param {MimeType} __ - Metadata type (unused).
+     * @param {MimeType} ___ - Payload type (unused).
+     * @returns {CancelFrame} Parsed frame.
+     */
     public static from(header: Header, _: ByteReader, __: MimeType, ___: MimeType): CancelFrame {
         return new CancelFrame(header.streamId)
     }
 
+    /**
+     * Serializes the frame — does nothing as `CANCEL` has no body.
+     *
+     * @param {ByteWriter} _ - Writer (unused).
+     */
     protected write(_: ByteWriter) {
+        // Nobody to write.
     }
 
+    /**
+     * `CANCEL` frames must never be ignored.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false
     }
 
+    /**
+     * `CANCEL` frames never carry metadata.
+     *
+     * @returns {false}
+     */
     public hasMetadata(): boolean {
         return false
     }

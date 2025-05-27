@@ -1,10 +1,10 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {Payload} from "@/frame/context/Payload";
-import {ByteReader, ByteWriter} from "bebyte";
-import Header from "@/frame/context/Header";
-import {KeepaliveFlag} from "@/frame";
-import {MimeType} from "@/mimetype";
+import {Header} from "@/frame/context/Header";
+import {KeepaliveFlag} from "@/frame/FrameFlag";
+import {MimeType} from "@/mimetype/MimeType";
 
 /**
  * ### KEEPALIVE Frame (0x03)
@@ -50,6 +50,13 @@ import {MimeType} from "@/mimetype";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-keepalive}
  */
 export class KeepaliveFrame extends Frame {
+    /**
+     * Constructs a new `KeepaliveFrame` instance.
+     *
+     * @param {KeepaliveFlag} flags - Indicates if a response is required (`RESPOND`).
+     * @param {bigint} lastReceivedPosition - Resume position received (or `0n` if not used).
+     * @param {Payload<any>} [payload] - Optional payload to echo (must be echoed back if RESPOND is set).
+     */
     constructor(
         flags: KeepaliveFlag = KeepaliveFlag.NONE,
         private readonly lastReceivedPosition: bigint = 0n,
@@ -58,6 +65,15 @@ export class KeepaliveFrame extends Frame {
         super(FrameType.KEEPALIVE, 0, flags, undefined, payload);
     }
 
+    /**
+     * Parses a `KeepaliveFrame` from a binary stream.
+     *
+     * @param {Header} header - Frame header (must be type `KEEPALIVE`).
+     * @param {ByteReader} reader - Reader positioned at frame body.
+     * @param {MimeType} _ - Metadata type (ignored).
+     * @param {MimeType} payloadType - Used to deserialize payload.
+     * @returns {KeepaliveFrame} Parsed frame.
+     */
     public static from(header: Header, reader: ByteReader, _: MimeType, payloadType: MimeType): KeepaliveFrame {
         return new KeepaliveFrame(
             header.flags,
@@ -66,22 +82,51 @@ export class KeepaliveFrame extends Frame {
         )
     }
 
+    /**
+     * Parses a `KeepaliveFrame` from a binary stream.
+     *
+     * @param {Header} header - Frame header (must be type `KEEPALIVE`).
+     * @param {ByteReader} reader - Reader positioned at frame body.
+     * @param {MimeType} _ - Metadata type (ignored).
+     * @param {MimeType} payloadType - Used to deserialize payload.
+     * @returns {KeepaliveFrame} Parsed frame.
+     */
     public isFlagSet(flag: KeepaliveFlag): boolean {
         return super.isFlagSet(flag)
     }
 
+    /**
+     * Serializes the resume position into the stream.
+     *
+     * @param {ByteWriter} writer - Binary writer.
+     */
     protected write(writer: ByteWriter): void {
         writer.i63(this.lastReceivedPosition)
     }
 
+    /**
+     * Indicates that this frame cannot be ignored.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false
     }
 
+    /**
+     * `KEEPALIVE` never contains metadata.
+     *
+     * @returns {false}
+     */
     public hasMetadata(): boolean {
         return false
     }
 
+    /**
+     * Returns `true` if the `RESPOND` flag is set, meaning the peer must reply.
+     *
+     * @returns {boolean}
+     */
     public isRequireRespond() {
         return this.isFlagSet(KeepaliveFlag.RESPOND)
     }

@@ -1,9 +1,9 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
-import {FrameFlag} from "@/frame";
-import Header from "@/frame/context/Header";
-import {MimeType} from "@/mimetype";
+import {FrameFlag} from "@/frame/FrameFlag";
+import {Header} from "@/frame/context/Header";
+import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
 
 /**
@@ -37,23 +37,54 @@ import {Metadata} from "@/frame/context/Metadata";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-metadata-push}
  */
 export class MetadataPushFrame extends Frame {
+    /**
+     * Constructs a new `MetadataPushFrame` with given metadata.
+     *
+     * @param {Metadata<any>} metadata - The metadata to push.
+     */
     public constructor(metadata: Metadata<any>) {
         super(FrameType.METADATA_PUSH, 0, FrameFlag.METADATA, metadata, undefined);
     }
 
+
+    /**
+     * Deserializes a `MetadataPushFrame` from a byte stream.
+     *
+     * @param {Header} _ - Frame header (unused, must be `FrameType.METADATA_PUSH`).
+     * @param {ByteReader} reader - Reader positioned at metadata body.
+     * @param {MimeType} metadataType - MIME type for decoding metadata.
+     * @param {MimeType} __ - Payload type (ignored).
+     * @returns {MetadataPushFrame} Parsed frame instance.
+     */
     public static from(_: Header, reader: ByteReader, metadataType: MimeType, __: MimeType): MetadataPushFrame {
         return new MetadataPushFrame(metadataType.toMetadata(reader, false))
     }
 
+    /**
+     * Overrides the `write` method to disable metadata length encoding.
+     * This frame must write raw metadata only, without a 24-bit length prefix.
+     *
+     * @param {ByteWriter} _ - Writer for serialization (not used here).
+     */
     protected write(_: ByteWriter) {
         const writeMetadata = this.metadata?.write
-        if(writeMetadata != null) this.metadata!.write = (writer: ByteWriter) => writeMetadata(writer, false)
+        if (writeMetadata != null) this.metadata!.write = (writer: ByteWriter) => writeMetadata(writer, false)
     }
 
+    /**
+     * `METADATA_PUSH` frames must never be ignored.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false
     }
 
+    /**
+     * Always returns `true`, since this frame only carries metadata.
+     *
+     * @returns {true}
+     */
     public hasMetadata(): boolean {
         return true
     }

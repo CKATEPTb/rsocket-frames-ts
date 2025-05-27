@@ -1,10 +1,10 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {FrameErrorCode} from "@/frame/FrameErrorCode";
-import bebyte, {ByteReader, ByteWriter} from "bebyte";
-import Header from "@/frame/context/Header";
-import {FrameFlag} from "@/frame";
-import {MimeType} from "@/mimetype";
+import {Header} from "@/frame/context/Header";
+import {FrameFlag} from "@/frame/FrameFlag";
+import {MimeType} from "@/mimetype/MimeType";
 import {Payload} from "@/frame/context/Payload";
 
 /**
@@ -67,14 +67,30 @@ import {Payload} from "@/frame/context/Payload";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-error}
  */
 export class ErrorFrame extends Frame {
+    /**
+     * Creates an `ErrorFrame` instance.
+     *
+     * @param {number} streamId - The stream ID (0 for connection-level errors).
+     * @param {FrameErrorCode} code - The specific error code.
+     * @param {Payload<any>} [payload] - Optional error payload (usually UTF-8 message).
+     */
     constructor(
         streamId: number,
-        protected readonly code: FrameErrorCode,
+        public readonly code: FrameErrorCode,
         payload?: Payload<any>
     ) {
         super(FrameType.ERROR, streamId, FrameFlag.NONE, undefined, payload);
     }
 
+    /**
+     * Parses an `ErrorFrame` from binary data.
+     *
+     * @param {Header} header - The frame header.
+     * @param {ByteReader} reader - Reader positioned at error code.
+     * @param {MimeType} _ - Metadata MIME type (ignored).
+     * @param {MimeType} payloadType - Used to decode the error payload.
+     * @returns {ErrorFrame} The parsed error frame.
+     */
     public static from(header: Header, reader: ByteReader, _: MimeType, payloadType: MimeType): ErrorFrame {
         return new ErrorFrame(
             header.streamId,
@@ -83,14 +99,29 @@ export class ErrorFrame extends Frame {
         )
     }
 
+    /**
+     * Serializes the frame body (error code + optional payload).
+     *
+     * @param {ByteWriter} writer - Writer for binary serialization.
+     */
     protected write(writer: ByteWriter): void {
         writer.i32(this.code)
     }
 
+    /**
+     * `ERROR` frames must not be ignored.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false
     }
 
+    /**
+     * `ERROR` frames never carry metadata.
+     *
+     * @returns {false}
+     */
     public hasMetadata(): boolean {
         return false
     }

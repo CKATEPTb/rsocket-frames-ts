@@ -1,9 +1,9 @@
+import {ByteReader, ByteWriter} from "bebyte";
+import {decode, encode} from "@/utils";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
-import Header from "@/frame/context/Header";
-import {decode, encode} from "@/utils";
-import {MimeType} from "@/mimetype";
+import {Header} from "@/frame/context/Header";
+import {MimeType} from "@/mimetype/MimeType";
 
 /**
  * #### RESUME Frame (0x0D)
@@ -46,6 +46,15 @@ import {MimeType} from "@/mimetype";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-resume}
  */
 export class ResumeFrame extends Frame {
+    /**
+     * Creates a new `ResumeFrame`.
+     *
+     * @param {string} resumeToken - Identifier for the resume session, must match the token from `SETUP`.
+     * @param {bigint} lastReceivedServerPosition - The last byte position received from the server before disconnection.
+     * @param {bigint} firstAvailableClientPosition - The earliest byte position from which the client can replay messages.
+     * @param {number} [majorVersion=1] - Protocol major version.
+     * @param {number} [minorVersion=0] - Protocol minor version.
+     */
     public constructor(
         public readonly resumeToken: string,
         public readonly lastReceivedServerPosition: bigint,
@@ -56,6 +65,15 @@ export class ResumeFrame extends Frame {
         super(FrameType.RESUME, 0)
     }
 
+    /**
+     * Deserializes a `ResumeFrame` from the binary stream.
+     *
+     * @param {Header} _ - The frame header (must be type `RESUME`).
+     * @param {ByteReader} reader - Binary reader positioned at the body.
+     * @param {MimeType} __ - Ignored metadata type (no metadata in RESUME).
+     * @param {MimeType} ___ - Ignored payload type (no payload in RESUME).
+     * @returns {ResumeFrame} A parsed `ResumeFrame` instance.
+     */
     public static from(_: Header, reader: ByteReader, __: MimeType, ___: MimeType): ResumeFrame {
         const major = reader.i16()
         const minor = reader.i16()
@@ -65,6 +83,13 @@ export class ResumeFrame extends Frame {
         return new ResumeFrame(resumeToken, lastReceivedServerPosition, firstAvailableClientPosition, major, minor)
     }
 
+    /**
+     * Writes the `ResumeFrame` to the binary stream.
+     *
+     * Format includes protocol version, resume token, and position fields.
+     *
+     * @param {ByteWriter} writer - Writer used to serialize the frame body.
+     */
     protected write(writer: ByteWriter) {
         writer.i16(this.majorVersion)
         writer.i16(this.minorVersion)
@@ -75,10 +100,20 @@ export class ResumeFrame extends Frame {
         writer.i63(this.firstAvailableClientPosition)
     }
 
+    /**
+     * Resume frames must never be ignored.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false;
     }
 
+    /**
+     * Resume frames never contain metadata.
+     *
+     * @returns {false}
+     */
     public hasMetadata(): boolean {
         return false;
     }

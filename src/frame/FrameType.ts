@@ -1,23 +1,55 @@
+/**
+ * Enumeration of all standard RSocket frame types.
+ *
+ * These frame types define the kind of protocol message being sent
+ * over the RSocket connection. Each frame has a unique identifier byte
+ * used for decoding and routing.
+ */
 export enum FrameType {
-    RESERVED = 0x00, // Reserved
-    SETUP = 0x01, // Setup: Sent by client to initiate protocol processing
-    LEASE = 0x02, // Lease: Sent by Responder to grant the ability to send requests
-    KEEPALIVE = 0x03, // Keepalive: Connection keepalive
-    REQUEST_RESPONSE = 0x04, // Request Response: Request single response
-    REQUEST_FNF = 0x05, // Fire And Forget: A single one-way message
-    REQUEST_STREAM = 0x06, // Request Stream: Request a completable stream
-    REQUEST_CHANNEL = 0x07, // Request Channel: Request a completable stream in both directions
-    REQUEST_N = 0x08, // Request N: Request N more items with Reactive Streams semantics
-    CANCEL = 0x09, // Cancel Request: Cancel outstanding request
-    PAYLOAD = 0x0A, // Payload: Payload on a stream. For example, response to a request, or message on a channel
-    ERROR = 0x0B, // Error: Error at connection or application level
-    METADATA_PUSH = 0x0C, // Metadata: Asynchronous Metadata frame
-    RESUME = 0x0D, // Resume: Replaces SETUP for Resuming Operation (optional)
-    RESUME_OK = 0x0E, // Resume OK : Sent in response to a RESUME if resuming operation possible (optional)
-    EXT = 0x3F // Extension Header: Used To Extend more frame types as well as extensions
+    /** `0x00` - Reserved for future use. */
+    RESERVED = 0x00,
+    /** `0x01` - Sent by the client to initiate the connection and negotiate setup parameters. */
+    SETUP = 0x01,
+    /** `0x02` - Sent by the responder to grant the requester permission to send requests. */
+    LEASE = 0x02,
+    /** `0x03` - Used to maintain liveness of the connection. */
+    KEEPALIVE = 0x03,
+    /** `0x04` - Request-Response interaction model (1 request, 1 response). */
+    REQUEST_RESPONSE = 0x04,
+    /** `0x05` - Fire-and-Forget: A one-way message with no response. */
+    REQUEST_FNF = 0x05,
+    /** `0x06` - Request a stream of responses (possibly infinite). */
+    REQUEST_STREAM = 0x06,
+    /** `0x07` - Bi-directional stream of messages between requester and responder. */
+    REQUEST_CHANNEL = 0x07,
+    /** `0x08` - Request N more items in a stream (backpressure mechanism). */
+    REQUEST_N = 0x08,
+    /** `0x09` - Cancel an ongoing request. */
+    CANCEL = 0x09,
+    /** `0x0A` - Used to transmit a payload on a stream. */
+    PAYLOAD = 0x0A,
+    /** `0x0B` - Represents an application or connection-level error. */
+    ERROR = 0x0B,
+    /** `0x0C` - Pushes metadata out-of-band to the peer. */
+    METADATA_PUSH = 0x0C,
+    /** `0x0D` - Sent to resume a connection (if supported). */
+    RESUME = 0x0D,
+    /** `0x0E` - Acknowledges a successful resume. */
+    RESUME_OK = 0x0E,
+    /** `0x3F` - Reserved for protocol extensions. */
+    EXT = 0x3F
 }
 
 export namespace FrameType {
+    /**
+     * Attempts to determine the `FrameType` based on the given byte value.
+     *
+     * This performs a best-match lookup by applying bitmask matching
+     * in reverse order of definition, favoring the most specific match.
+     *
+     * @param {number} byte - The raw frame type byte value.
+     * @returns {FrameType} The corresponding `FrameType` enum value.
+     */
     export function fromByte(byte: number): FrameType {
         return Array.from(Object.entries(FrameType))
             .filter(([key, _]) => Number.isNaN(Number(key)))

@@ -1,10 +1,10 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
 import {FrameErrorCode} from "@/frame/FrameErrorCode";
-import Header from "@/frame/context/Header";
-import {ExtensionFlag} from "@/frame";
-import {MimeType} from "@/mimetype";
+import {Header} from "@/frame/context/Header";
+import {ExtensionFlag} from "@/frame/FrameFlag";
+import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
 import {Payload} from "@/frame/context/Payload";
 
@@ -44,6 +44,15 @@ import {Payload} from "@/frame/context/Payload";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-ext}
  */
 export class ExtensionFrame extends Frame {
+    /**
+     * Constructs an `ExtensionFrame` instance.
+     *
+     * @param {number} streamId - Associated stream ID (`0` for connection-level extensions).
+     * @param {ExtensionFlag} flags - Extension and metadata flags.
+     * @param {number} extendedType - Custom extension type (must be > 0).
+     * @param {Metadata<any>} [metadata] - Optional metadata block.
+     * @param {Payload<any>} [payload] - Optional payload block.
+     */
     public constructor(
         streamId: number,
         flags: ExtensionFlag,
@@ -54,6 +63,15 @@ export class ExtensionFrame extends Frame {
         super(FrameType.EXT, streamId, flags, metadata, payload);
     }
 
+    /**
+     * Parses an `ExtensionFrame` from binary data.
+     *
+     * @param {Header} header - Frame header (must be `FrameType.EXT`).
+     * @param {ByteReader} reader - Byte stream reader.
+     * @param {MimeType} metadataType - Metadata MIME type for decoding.
+     * @param {MimeType} payloadType - Payload MIME type for decoding.
+     * @returns {ExtensionFrame} Parsed extension frame instance.
+     */
     public static from(header: Header, reader: ByteReader, metadataType: MimeType, payloadType: MimeType): ExtensionFrame {
         return new ExtensionFrame(
             header.streamId,
@@ -64,10 +82,21 @@ export class ExtensionFrame extends Frame {
         )
     }
 
+    /**
+     * Checks whether a specific flag is set on this extension frame.
+     *
+     * @param {ExtensionFlag} flag - The flag to check.
+     * @returns {boolean} `true` if the flag is present.
+     */
     public isFlagSet(flag: ExtensionFlag): boolean {
         return super.isFlagSet(flag)
     }
 
+    /**
+     * Serializes the extension frame (writes extended type and optional metadata/payload).
+     *
+     * @param {ByteWriter} writer - Writer for binary serialization.
+     */
     protected write(writer: ByteWriter) {
         writer.i31(this.extendedType)
     }

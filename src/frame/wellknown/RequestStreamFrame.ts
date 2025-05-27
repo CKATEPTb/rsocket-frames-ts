@@ -1,10 +1,10 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
-import {RequestChannelFlag, RequestStreamFlag} from "@/frame";
+import {RequestStreamFlag} from "@/frame/FrameFlag";
 import {Payload} from "@/frame/context/Payload";
-import Header from "@/frame/context/Header";
-import {MimeType} from "@/mimetype";
+import {Header} from "@/frame/context/Header";
+import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
 
 /**
@@ -39,6 +39,15 @@ import {Metadata} from "@/frame/context/Metadata";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-request-stream}
  */
 export class RequestStreamFrame extends Frame {
+    /**
+     * Creates a `REQUEST_STREAM` frame.
+     *
+     * @param {number} streamId - The unique stream identifier.
+     * @param {RequestStreamFlag} flags - Frame flags (e.g., METADATA, FOLLOWS).
+     * @param {number} request - Initial number of items requested (must be > 0).
+     * @param {Metadata<any>} [metadata] - Optional metadata block.
+     * @param {Payload<any>} [payload] - Optional payload block.
+     */
     public constructor(
         streamId: number,
         flags: RequestStreamFlag,
@@ -49,29 +58,61 @@ export class RequestStreamFrame extends Frame {
         super(FrameType.REQUEST_STREAM, streamId, flags, metadata, payload);
     }
 
+    /**
+     * Parses a `REQUEST_STREAM` frame from binary.
+     *
+     * @param {Header} header - Frame header (must be type `REQUEST_STREAM`).
+     * @param {ByteReader} reader - Reader positioned at frame body.
+     * @param {MimeType<any>} metadataType - MIME type for decoding metadata.
+     * @param {MimeType<any>} payloadType - MIME type for decoding payload.
+     * @returns {RequestStreamFrame} The parsed frame instance.
+     */
     public static from(header: Header, reader: ByteReader, metadataType: MimeType, payloadType: MimeType): RequestStreamFrame {
         return new RequestStreamFrame(
             header.streamId,
             header.flags,
             reader.i32(),
-            header.isFlagSet(RequestChannelFlag.METADATA) ? metadataType.toMetadata(reader) : undefined,
+            header.isFlagSet(RequestStreamFlag.METADATA) ? metadataType.toMetadata(reader) : undefined,
             payloadType.toPayload(reader)
         )
     }
 
+    /**
+     * Serializes the initial request count.
+     *
+     * @param {ByteWriter} writer - Writer to output the frame body.
+     */
     protected write(writer: ByteWriter) {
         writer.i31(this.request)
     }
 
+    /**
+     * Checks whether a specific flag is set.
+     *
+     * @param {RequestStreamFlag} flag - The flag to test.
+     * @returns {boolean} True if the flag is set.
+     */
     public isFlagSet(flag: RequestStreamFlag): boolean {
         return super.isFlagSet(flag)
     }
 
+    /**
+     * Indicates whether this frame may be safely ignored.
+     * Always returns `false`.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false;
     }
 
-    public hasFollows() {
+    /**
+     * Returns `true` if the frame has the `FOLLOWS` flag set, indicating
+     * that additional fragments follow this one.
+     *
+     * @returns {boolean} `true` if the frame is fragmented.
+     */
+    public hasFollows(): boolean {
         return this.isFlagSet(RequestStreamFlag.FOLLOWS)
     }
 }

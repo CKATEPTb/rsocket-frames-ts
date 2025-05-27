@@ -1,8 +1,8 @@
-import {Frame} from "@/frame";
-import {FrameType} from "@/frame/FrameType";
 import {ByteReader, ByteWriter} from "bebyte";
-import Header from "@/frame/context/Header";
-import {MimeType} from "@/mimetype";
+import {Frame} from "@/frame/Frame";
+import {FrameType} from "@/frame/FrameType";
+import {Header} from "@/frame/context/Header";
+import {MimeType} from "@/mimetype/MimeType";
 
 /**
  * ### REQUEST_N Frame (0x08)
@@ -30,6 +30,12 @@ import {MimeType} from "@/mimetype";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-request-n}
  */
 export class RequestNFrame extends Frame {
+    /**
+     * Constructs a `RequestNFrame` instance.
+     *
+     * @param {number} streamId - The ID of the stream to request more items on.
+     * @param {number} request - The number of additional items to request (must be > 0).
+     */
     public constructor(
         streamId: number,
         public readonly request: number,
@@ -37,6 +43,15 @@ export class RequestNFrame extends Frame {
         super(FrameType.REQUEST_N, streamId);
     }
 
+    /**
+     * Parses a `RequestNFrame` from a binary stream.
+     *
+     * @param {Header} header - Frame header (should be of type `REQUEST_N`).
+     * @param {ByteReader} reader - Reader positioned at the body.
+     * @param {MimeType} _ - Ignored metadata type.
+     * @param {MimeType} __ - Ignored payload type.
+     * @returns {RequestNFrame} Parsed frame instance.
+     */
     public static from(header: Header, reader: ByteReader, _: MimeType, __: MimeType): RequestNFrame {
         return new RequestNFrame(
             header.streamId,
@@ -44,15 +59,29 @@ export class RequestNFrame extends Frame {
         )
     }
 
+    /**
+     * Writes the body of the `RequestNFrame` (a single 31-bit integer).
+     *
+     * @param {ByteWriter} writer - Binary writer to serialize the frame.
+     */
     protected write(writer: ByteWriter) {
         writer.i31(this.request)
     }
 
+    /**
+     * Indicates that this frame must never be ignored.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false;
     }
 
-
+    /**
+     * Indicates that this frame does not contain metadata.
+     *
+     * @returns {false}
+     */
     public hasMetadata(): boolean {
         return false;
     }

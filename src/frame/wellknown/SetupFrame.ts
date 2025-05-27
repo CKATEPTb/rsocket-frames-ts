@@ -1,11 +1,11 @@
+import {ByteReader, ByteWriter} from "bebyte";
+import {decode, encode} from "@/utils";
 import {Frame} from "@/frame/Frame";
 import {Payload} from "@/frame/context/Payload";
 import {FrameType} from "@/frame/FrameType";
-import {decode, encode} from "@/utils";
 import {MimeType} from "@/mimetype/MimeType";
-import {ByteReader, ByteWriter} from "bebyte";
-import {ExtensionFlag, SetupFlag} from "@/frame";
-import Header from "@/frame/context/Header";
+import {SetupFlag} from "@/frame/FrameFlag";
+import {Header} from "@/frame/context/Header";
 import {Metadata} from "@/frame/context/Metadata";
 
 /**
@@ -80,6 +80,20 @@ import {Metadata} from "@/frame/context/Metadata";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-setup}
  */
 export class SetupFrame extends Frame {
+    /**
+     * Constructs a `SetupFrame` instance.
+     *
+     * @param {number} keepalive - Interval (ms) between client KEEPALIVE frames.
+     * @param {number} lifetime - Max time (ms) the server allows no KEEPALIVE.
+     * @param {MimeType<any>} metadataType - MIME type for metadata encoding.
+     * @param {MimeType<any>} dataType - MIME type for data encoding.
+     * @param {string} [resumeToken] - Optional resume token (if `RESUME` flag is set).
+     * @param {number} [majorVersion=1] - Major protocol version.
+     * @param {number} [minorVersion=0] - Minor protocol version.
+     * @param {SetupFlag} [flags=SetupFlag.NONE] - Initial flags (LEASE, METADATA, etc).
+     * @param {Metadata<any>} [metadata] - Optional metadata block.
+     * @param {Payload<any>} [payload] - Optional setup payload (application-specific).
+     */
     public constructor(
         public readonly keepalive: number,
         public readonly lifetime: number,
@@ -96,6 +110,15 @@ export class SetupFrame extends Frame {
         super(FrameType.SETUP, 0, flags, metadata, payload)
     }
 
+    /**
+     * Deserializes a `SetupFrame` from binary.
+     *
+     * @param {Header} header - Frame header containing flags and type.
+     * @param {ByteReader} reader - Reader instance pointing to frame body.
+     * @param {MimeType<any>} _ - Ignored metadata type from deserialization context.
+     * @param {MimeType<any>} __ - Ignored payload type from deserialization context.
+     * @returns {SetupFrame} Parsed setup frame.
+     */
     public static from(header: Header, reader: ByteReader, _: MimeType, __: MimeType): SetupFrame {
         const major = reader.i16()
         const minor = reader.i16()
@@ -104,11 +127,19 @@ export class SetupFrame extends Frame {
         const resumeToken = header.isFlagSet(SetupFlag.RESUME) ? decode(reader.read(reader.i16())) : undefined
         const metadataType = MimeType.valueOf(decode(reader.read(reader.i8())))
         const dataType = MimeType.valueOf(decode(reader.read(reader.i8())))
-        const metadata = header.isFlagSet(ExtensionFlag.METADATA) ? metadataType.toMetadata(reader) : undefined
+        const metadata = header.isFlagSet(SetupFlag.METADATA) ? metadataType.toMetadata(reader) : undefined
         const payload = dataType.toPayload(reader)
         return new SetupFrame(keepalive, lifetime, metadataType, dataType, resumeToken, major, minor, header.flags, metadata, payload)
     }
 
+    /**
+     * Writes the frame-specific portion of the `SetupFrame` to the output.
+     *
+     * This includes protocol version, keepalive, lifetime, resume token (if any),
+     * and MIME types for metadata and data.
+     *
+     * @param {ByteWriter} writer - Writer to output binary data.
+     */
     protected write(writer: ByteWriter) {
         writer.i16(this.majorVersion)
         writer.i16(this.minorVersion)
@@ -127,14 +158,31 @@ export class SetupFrame extends Frame {
         writer.write(dataType)
     }
 
+    /**
+     * SETUP frames must never be ignored, regardless of the IGNORE flag.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false
     }
 
+    /**
+     * Indicates whether this frame has resume support enabled.
+     * Based on the `RESUME` flag.
+     *
+     * @returns {boolean} `true` if resume token is present and `RESUME` flag is set.
+     */
     public hasResume(): boolean {
         return this.isFlagSet(SetupFlag.RESUME)
     }
 
+    /**
+     * Indicates whether this frame honors LEASE semantics.
+     * Based on the `LEASE` flag.
+     *
+     * @returns {boolean} `true` if the LEASE flag is set.
+     */
     public isRespectLease(): boolean {
         return this.isFlagSet(SetupFlag.LEASE)
     }

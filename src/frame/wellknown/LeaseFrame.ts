@@ -1,9 +1,9 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
-import {FrameFlag} from "@/frame";
-import Header from "@/frame/context/Header";
-import {MimeType} from "@/mimetype";
+import {FrameFlag} from "@/frame/FrameFlag";
+import {Header} from "@/frame/context/Header";
+import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
 
 /**
@@ -50,6 +50,13 @@ import {Metadata} from "@/frame/context/Metadata";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-lease}
  */
 export class LeaseFrame extends Frame {
+    /**
+     * Constructs a `LeaseFrame` instance.
+     *
+     * @param {number} ttl - Time-To-Live (in milliseconds) for which the lease is valid. Must be > 0.
+     * @param {number} requestLimit - Maximum number of requests allowed under this lease. Must be > 0.
+     * @param {Metadata<any>} [metadata] - Optional metadata (without length prefix).
+     */
     public constructor(
         public readonly ttl: number,
         public readonly requestLimit: number,
@@ -58,6 +65,15 @@ export class LeaseFrame extends Frame {
         super(FrameType.LEASE, 0, FrameFlag.NONE, metadata, undefined);
     }
 
+    /**
+     * Parses a `LeaseFrame` from a byte stream.
+     *
+     * @param {Header} header - Frame header (must have `Stream ID = 0`).
+     * @param {ByteReader} reader - Reader positioned at TTL.
+     * @param {MimeType} metadataType - MIME type to decode metadata.
+     * @param {MimeType} _ - Payload MIME type (ignored).
+     * @returns {LeaseFrame} Parsed instance.
+     */
     public static from(header: Header, reader: ByteReader, metadataType: MimeType, _: MimeType): LeaseFrame {
         return new LeaseFrame(
             reader.i32(),
@@ -66,13 +82,23 @@ export class LeaseFrame extends Frame {
         )
     }
 
+    /**
+     * Writes the TTL and request limit, followed by optional metadata (without metadata length prefix).
+     *
+     * @param {ByteWriter} writer - Writer for binary serialization.
+     */
     protected write(writer: ByteWriter) {
         writer.i31(this.ttl)
         writer.i31(this.requestLimit)
         const writeMetadata = this.metadata?.write
-        if(writeMetadata != null) this.metadata!.write = (writer: ByteWriter) => writeMetadata(writer, false)
+        if (writeMetadata != null) this.metadata!.write = (writer: ByteWriter) => writeMetadata(writer, false)
     }
 
+    /**
+     * `LEASE` frames must never be ignored, as they control permission to send requests.
+     *
+     * @returns {false}
+     */
     public canBeIgnored(): boolean {
         return false
     }

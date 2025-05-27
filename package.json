@@ -1,7 +1,7 @@
 {
-  "name": "rsocket-js",
-  "version": "0.0.1-alpha",
-  "description": "The RSocket client implementation via websocket to browser compatibility based on Uint8Array",
+  "name": "rsocket-frames-ts",
+  "version": "1.0.0",
+  "description": "RSocket frame codec implemented with Uint8Array. Supports full spec, metadata extensions, and browser compatibility.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -19,10 +19,9 @@
     "test": "jest --config jest.config.ts",
     "test:watch": "jest --config jest.config.ts --watch"
   },
-  "author": "FakeIvchenko, CKATEPTb",
+  "author": "fakeivchenko, CKATEPTb",
   "license": "LGPL-3.0-only",
   "devDependencies": {
-    "@ckateptb/reactive-core-js": "github:CKATEPTb/reactor-core-js#production",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.15.21",
     "jest": "^29.7.0",
@@ -32,7 +31,14 @@
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   },
-  "keywords": [],
+  "keywords": [
+    "rsocket",
+    "protocol",
+    "frame",
+    "uint8array",
+    "typescript",
+    "spec"
+  ],
   "files": [
     "dist"
   ],

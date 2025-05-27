@@ -1,10 +1,10 @@
+import {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
-import {FireAndForgetFlag} from "@/frame";
+import {FireAndForgetFlag} from "@/frame/FrameFlag";
 import {Payload} from "@/frame/context/Payload";
-import Header from "@/frame/context/Header";
-import {MimeType} from "@/mimetype";
+import {Header} from "@/frame/context/Header";
+import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
 
 /**
@@ -33,6 +33,14 @@ import {Metadata} from "@/frame/context/Metadata";
  * @see [Official documentation]{@link https://github.com/rsocket/rsocket/blob/master/Protocol.md#frame-fnf}
  */
 export class RequestFireAndForgetFrame extends Frame {
+    /**
+     * Constructs a `REQUEST_FNF` frame instance.
+     *
+     * @param {number} streamId - The ID of the stream.
+     * @param {FireAndForgetFlag} flags - Flags (e.g., METADATA, FOLLOWS).
+     * @param {Metadata<any>} [metadata] - Optional metadata.
+     * @param {Payload<any>} [payload] - Optional payload.
+     */
     public constructor(
         streamId: number,
         flags: FireAndForgetFlag,
@@ -42,6 +50,16 @@ export class RequestFireAndForgetFrame extends Frame {
         super(FrameType.REQUEST_FNF, streamId, flags, metadata, payload);
     }
 
+
+    /**
+     * Deserializes a `REQUEST_FNF` frame from the byte stream.
+     *
+     * @param {Header} header - Frame header.
+     * @param {ByteReader} reader - Byte reader positioned at frame body.
+     * @param {MimeType<any>} metadataType - Metadata MIME type for decoding.
+     * @param {MimeType<any>} payloadType - Payload MIME type for decoding.
+     * @returns {RequestFireAndForgetFrame} Parsed frame.
+     */
     public static from(header: Header, reader: ByteReader, metadataType: MimeType, payloadType: MimeType): RequestFireAndForgetFrame {
         return new RequestFireAndForgetFrame(
             header.streamId,
@@ -51,18 +69,41 @@ export class RequestFireAndForgetFrame extends Frame {
         )
     }
 
+    /**
+     * Serializes the frame-specific body.
+     * This frame has no fixed fields; metadata and payload are written separately.
+     *
+     * @param {ByteWriter} _ - Writer (unused in this method).
+     */
     protected write(_: ByteWriter) {
     }
 
+    /**
+     * Serializes the frame-specific body.
+     * This frame has no fixed fields; metadata and payload are written separately.
+     *
+     * @param {ByteWriter} _ - Writer (unused in this method).
+     */
     public isFlagSet(flag: FireAndForgetFlag): boolean {
         return super.isFlagSet(flag)
     }
 
+    /**
+     * Serializes the frame-specific body.
+     * This frame has no fixed fields; metadata and payload are written separately.
+     *
+     * @param {ByteWriter} _ - Writer (unused in this method).
+     */
     public canBeIgnored(): boolean {
         return false;
     }
 
-    public hasFollows() {
+    /**
+     * Returns `true` if the frame is fragmented (i.e. `FOLLOWS` flag is set).
+     *
+     * @returns {boolean} `true` if additional fragments follow.
+     */
+    public hasFollows(): boolean {
         return this.isFlagSet(FireAndForgetFlag.FOLLOWS)
     }
 }
