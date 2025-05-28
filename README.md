@@ -19,19 +19,19 @@ intermediaries.
 To install the package using **npm**:
 
 ```bash
-npm install CKATEPTb/rsocket-frames-ts#production
+npm install rsocket-frames-ts
 ```
 
 To install the package using **pnpm**:
 
 ```bash
-pnpm install CKATEPTb/rsocket-frames-ts#production
+pnpm install rsocket-frames-ts
 ```
 
 To install the package using **yarn**:
 
 ```bash
-yarn install CKATEPTb/rsocket-frames-ts#production
+yarn install rsocket-frames-ts
 ```
 
 ## ✅ Recommended Use Cases
