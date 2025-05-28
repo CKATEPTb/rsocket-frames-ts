@@ -23,7 +23,7 @@ export abstract class Frame extends FrameWriter {
      * The internal frame header (type, flags, stream ID).
      * @protected
      */
-    protected readonly header: Header
+    public readonly header: Header
 
     /**
      * Constructs a new frame instance.
