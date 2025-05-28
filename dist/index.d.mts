@@ -1,5 +1,4 @@
 import { ByteWriter, ByteReader } from 'bebyte';
-export { ByteReader, ByteWriter, default as bebyte } from 'bebyte';
 
 /**
  * Enumeration of all standard RSocket frame types.
@@ -1191,7 +1190,7 @@ declare abstract class Frame extends FrameWriter {
      * The internal frame header (type, flags, stream ID).
      * @protected
      */
-    protected readonly header: Header;
+    readonly header: Header;
     /**
      * Constructs a new frame instance.
      *
