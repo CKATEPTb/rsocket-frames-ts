@@ -90,8 +90,6 @@ export class LeaseFrame extends Frame {
     protected write(writer: ByteWriter) {
         writer.i31(this.ttl)
         writer.i31(this.requestLimit)
-        const writeMetadata = this.metadata?.write
-        if (writeMetadata != null) this.metadata!.write = (writer: ByteWriter) => writeMetadata(writer, false)
     }
 
     /**
