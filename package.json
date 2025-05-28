@@ -1,6 +1,6 @@
 {
   "name": "rsocket-frames-ts",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "RSocket frame codec implemented with Uint8Array. Supports full spec, metadata extensions, and browser compatibility.",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",

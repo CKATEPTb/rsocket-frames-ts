@@ -67,8 +67,6 @@ export class MetadataPushFrame extends Frame {
      * @param {ByteWriter} _ - Writer for serialization (not used here).
      */
     protected write(_: ByteWriter) {
-        const writeMetadata = this.metadata?.write
-        if (writeMetadata != null) this.metadata!.write = (writer: ByteWriter) => writeMetadata(writer, false)
     }
 
     /**
