@@ -19,19 +19,19 @@ intermediaries.
 To install the package using **npm**:
 
 ```bash
-npm install rsocket-frames-ts
+npm install rsocket-frames-ts bebyte
 ```
 
 To install the package using **pnpm**:
 
 ```bash
-pnpm install rsocket-frames-ts
+pnpm install rsocket-frames-ts bebyte
 ```
 
 To install the package using **yarn**:
 
 ```bash
-yarn install rsocket-frames-ts
+yarn install rsocket-frames-ts bebyte
 ```
 
 ## ✅ Recommended Use Cases
