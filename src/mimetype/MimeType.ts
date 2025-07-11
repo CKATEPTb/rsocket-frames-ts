@@ -1,4 +1,4 @@
-import {ByteReader} from "bebyte";
+import bebyte, {ByteReader} from "bebyte";
 import {Metadata} from "@/frame/context/Metadata";
 import {Payload} from "@/frame/context/Payload";
 
@@ -67,6 +67,7 @@ export class MimeType<T = Uint8Array> {
      * @returns {Metadata<T>} A `Metadata` instance.
      */
     public toMetadata(payload: ByteReader | T, hasPayload: boolean = true): Metadata<T> {
+        if(payload instanceof Uint8Array) return this.deserializeMetadata(bebyte.reader(payload), hasPayload)
         if (typeof (payload as ByteReader)['i8'] == 'function') return this.deserializeMetadata(payload as ByteReader, hasPayload)
         return this.serializeMetadata(payload as T)
     }
@@ -101,6 +102,7 @@ export class MimeType<T = Uint8Array> {
      * @returns {Payload<T>} A `Payload` instance.
      */
     public toPayload(payload: ByteReader | T): Payload<T> {
+        if(payload instanceof Uint8Array) return this.deserializePayload(bebyte.reader(payload))
         if (typeof (payload as ByteReader)['i8'] == 'function') return this.deserializePayload(payload as ByteReader)
         return this.serializePayload(payload as T)
     }
