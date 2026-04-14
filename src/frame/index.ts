@@ -3,6 +3,7 @@ export * from "@/frame/FrameType";
 export * from "@/frame/FrameFlag";
 export * from "@/frame/Frame";
 export * from "@/frame/FrameDeserializer";
+export * from "@/frame/FrameErrorCode";
 export * from "@/frame/wellknown/SetupFrame";
 export * from "@/frame/wellknown/ReservedFrame";
 export * from "@/frame/wellknown/LeaseFrame";
