@@ -114,7 +114,7 @@ export class MimeType<T = Uint8Array> {
      * @param {string | number} mimeType - MIME type string or numeric identifier.
      * @returns {MimeType} A matching or unknown `MimeType` instance.
      */
-    public static valueOf(mimeType: string | number): MimeType {
+    public static valueOf<T>(mimeType: string | number): MimeType<T> {
         return Array.from(MimeType._values.values())
                 .find(v => mimeType == (typeof mimeType == "string" ? v.mimeType : v.identifier)) ||
             new class UnknownMimeType extends MimeType {
