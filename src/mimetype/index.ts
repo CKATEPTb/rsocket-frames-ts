@@ -5,6 +5,8 @@ import {RSocketComposite} from "@/mimetype/message/RSocketComposite";
 import {RSocketTracingZipkin} from "@/mimetype/message/RSocketTracingZipkin";
 import {RSocketAuth} from "@/mimetype/message/security/RSocketAuth";
 import {AuthType, WellKnownAuthType} from "@/mimetype/message/security";
+import {ApplicationJson} from "@/mimetype/ApplicationJson";
+import {TextPlain} from "@/mimetype/TextPlain";
 
 export {
     MimeType, WellKnownAuthType, AuthType
@@ -19,13 +21,13 @@ export namespace WellKnownMimeType {
     /** Concise Binary Object Representation (CBOR). */
     export const APPLICATION_CBOR = new MimeType('application/cbor', 0x01)
     /** GraphQL query format. */
-    export const APPLICATION_GRAPHQL = new MimeType('application/graphql', 0x02)
+    export const APPLICATION_GRAPHQL = new TextPlain('application/graphql', 0x02)
     /** GZIP compressed data. */
     export const APPLICATION_GZIP = new MimeType('application/gzip', 0x03)
     /** JavaScript source code. */
-    export const APPLICATION_JAVASCRIPT = new MimeType('application/javascript', 0x04)
+    export const APPLICATION_JAVASCRIPT = new TextPlain('application/javascript', 0x04)
     /** JSON encoded data. */
-    export const APPLICATION_JSON = new MimeType('application/json', 0x05)
+    export const APPLICATION_JSON = new ApplicationJson('application/json', 0x05)
     /** Binary stream format. */
     export const APPLICATION_OCTET_STREAM = new MimeType('application/octet-stream', 0x06)
     /** Portable Document Format. */
@@ -35,7 +37,7 @@ export namespace WellKnownMimeType {
     /** Google Protocol Buffers format. */
     export const APPLICATION_PROTOBUF = new MimeType('application/vnd.google.protobuf', 0x09)
     /** XML encoded data. */
-    export const APPLICATION_XML = new MimeType('application/xml', 0x0A)
+    export const APPLICATION_XML = new TextPlain('application/xml', 0x0A)
     /** ZIP compressed archive. */
     export const APPLICATION_ZIP = new MimeType('application/zip', 0x0B)
     /** Audio encoded using aac Coding. */
@@ -75,15 +77,15 @@ export namespace WellKnownMimeType {
     /** MIME multipart/mixed content. */
     export const MULTIPART_MIXED = new MimeType('multipart/mixed', 0x1D)
     /** CSS stylesheet. */
-    export const TEXT_CSS = new MimeType('text/css', 0x1E)
+    export const TEXT_CSS = new TextPlain('text/css', 0x1E)
     /** CSV (Comma Separated Values) text. */
-    export const TEXT_CSV = new MimeType('text/csv', 0x1F)
+    export const TEXT_CSV = new TextPlain('text/csv', 0x1F)
     /** HTML document. */
-    export const TEXT_HTML = new MimeType('text/html', 0x20)
+    export const TEXT_HTML = new TextPlain('text/html', 0x20)
     /** Plain text. */
-    export const TEXT_PLAIN = new MimeType('text/plain', 0x21)
+    export const TEXT_PLAIN = new TextPlain('text/plain', 0x21)
     /** XML text. */
-    export const TEXT_XML = new MimeType('text/xml', 0x22)
+    export const TEXT_XML = new TextPlain('text/xml', 0x22)
     /** H.264 video stream. */
     export const VIDEO_H264 = new MimeType('video/H264', 0x23)
     /** H.265 video stream. */
@@ -95,7 +97,11 @@ export namespace WellKnownMimeType {
     /** Serialized Java objects. */
     export const APPLICATION_JAVA_OBJECT = new MimeType('application/x-java-object', 0x27)
     /** CloudEvents encoded in JSON. */
-    export const APPLICATION_CLOUDEVENTS_JSON = new MimeType('application/cloudevents+json', 0x28)
+    export const APPLICATION_CLOUDEVENTS_JSON = new ApplicationJson('application/cloudevents+json', 0x28)
+    /** Cap'n Proto serialization format. */
+    export const APPLICATION_X_CAPNP        = new MimeType("application/x-capnp", 0x29)
+    /** FlatBuffers serialization format. */
+    export const APPLICATION_X_FLATBUFFERS  = new MimeType("application/x-flatbuffers", 0x2A)
     /** RSocket metadata for MIME type declarations. */
     export const MESSAGE_RSOCKET_MIMETYPE = new RSocketMimeType('message/x.rsocket.mime-type.v0', 0x7A)
     /** RSocket metadata for accepted MIME types. */
