@@ -17,6 +17,10 @@
     "build": "node scripts/clean-dist.mjs && vite build && tsc -p tsconfig.build.json --emitDeclarationOnly && node scripts/rewrite-dts-aliases.mjs"
   },
   "author": "fakeivchenko, CKATEPTb",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CKATEPTb/rsocket-frames-ts"
+  },
   "license": "MIT",
   "sideEffects": false,
   "publishConfig": {
