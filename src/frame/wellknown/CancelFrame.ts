@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {Header} from "@/frame/context/Header";
@@ -58,7 +58,7 @@ export class CancelFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false
     }
 
@@ -67,7 +67,7 @@ export class CancelFrame extends Frame {
      *
      * @returns {false}
      */
-    public hasMetadata(): boolean {
+    public override hasMetadata(): boolean {
         return false
     }
 }

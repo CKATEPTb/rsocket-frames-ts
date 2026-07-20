@@ -1,12 +1,12 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
-import {FrameErrorCode} from "@/frame/FrameErrorCode";
 import {Header} from "@/frame/context/Header";
 import {ExtensionFlag} from "@/frame/FrameFlag";
 import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
 import {Payload} from "@/frame/context/Payload";
+import {assertInteger, MAX_UINT_31} from "@/utils";
 
 /**
  * ### EXT (Extension) Frame (0x3F)
@@ -56,11 +56,12 @@ export class ExtensionFrame extends Frame {
     public constructor(
         streamId: number,
         flags: ExtensionFlag,
-        public readonly extendedType: number, // todo придумать как типизировать, возможно стоит делать через factory
+        public readonly extendedType: number,
         metadata?: Metadata<any>,
         payload?: Payload<any>
     ) {
         super(FrameType.EXT, streamId, flags, metadata, payload);
+        assertInteger("Extended type", extendedType, 1, MAX_UINT_31)
     }
 
     /**
@@ -76,7 +77,7 @@ export class ExtensionFrame extends Frame {
         return new ExtensionFrame(
             header.streamId,
             header.flags,
-            FrameErrorCode.fromByte(reader.i32()),
+            reader.i32(),
             header.isFlagSet(ExtensionFlag.METADATA) ? metadataType.toMetadata(reader) : undefined,
             payloadType.toPayload(reader)
         )
@@ -88,7 +89,7 @@ export class ExtensionFrame extends Frame {
      * @param {ExtensionFlag} flag - The flag to check.
      * @returns {boolean} `true` if the flag is present.
      */
-    public isFlagSet(flag: ExtensionFlag): boolean {
+    public override isFlagSet(flag: ExtensionFlag): boolean {
         return super.isFlagSet(flag)
     }
 

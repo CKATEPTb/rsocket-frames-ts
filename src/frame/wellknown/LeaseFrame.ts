@@ -1,10 +1,11 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {FrameFlag} from "@/frame/FrameFlag";
 import {Header} from "@/frame/context/Header";
 import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
+import {assertInteger, MAX_UINT_31} from "@/utils";
 
 /**
  * ### LEASE Frame (0x02)
@@ -63,6 +64,8 @@ export class LeaseFrame extends Frame {
         metadata?: Metadata<any>
     ) {
         super(FrameType.LEASE, 0, FrameFlag.NONE, metadata, undefined);
+        assertInteger("Lease TTL", ttl, 0, MAX_UINT_31)
+        assertInteger("Lease request limit", requestLimit, 0, MAX_UINT_31)
     }
 
     /**
@@ -97,7 +100,7 @@ export class LeaseFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false
     }
 }

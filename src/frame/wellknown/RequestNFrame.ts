@@ -1,8 +1,9 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {Header} from "@/frame/context/Header";
 import {MimeType} from "@/mimetype/MimeType";
+import {assertInteger, MAX_UINT_31} from "@/utils";
 
 /**
  * ### REQUEST_N Frame (0x08)
@@ -41,6 +42,7 @@ export class RequestNFrame extends Frame {
         public readonly request: number,
     ) {
         super(FrameType.REQUEST_N, streamId);
+        assertInteger("Request N", request, 1, MAX_UINT_31)
     }
 
     /**
@@ -73,7 +75,7 @@ export class RequestNFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false;
     }
 
@@ -82,7 +84,7 @@ export class RequestNFrame extends Frame {
      *
      * @returns {false}
      */
-    public hasMetadata(): boolean {
+    public override hasMetadata(): boolean {
         return false;
     }
 }

@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {RequestResponseFlag} from "@/frame/FrameFlag";
@@ -85,7 +85,7 @@ export class RequestResponseFrame extends Frame {
      * @param {RequestResponseFlag} flag - The flag to check.
      * @returns {boolean} `true` if the flag is present.
      */
-    public isFlagSet(flag: RequestResponseFlag): boolean {
+    public override isFlagSet(flag: RequestResponseFlag): boolean {
         return super.isFlagSet(flag)
     }
 
@@ -94,7 +94,7 @@ export class RequestResponseFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false;
     }
 

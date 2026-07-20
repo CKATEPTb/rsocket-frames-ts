@@ -31,8 +31,13 @@ export const FrameFlag = Object.assign({
      * const flags = FrameFlag.combine(FrameFlag.METADATA, FrameFlag.IGNORE);
      * ```
      */
-    combine: (...flags: FrameFlag[]) => flags.reduce((prev, curr) => prev | curr, 0)
+    combine: (...flags: FrameFlag[]) => {
+        let combined = 0;
+        for (const flag of flags) combined |= flag;
+        return combined;
+    }
 }, _FrameFlag);
+/** Numeric bitmask accepted by every frame header. */
 export type FrameFlag = number | _FrameFlag;
 
 /**
@@ -49,6 +54,7 @@ enum _KeepaliveFlag {
  * Flags applicable to KEEPALIVE frames.
  */
 export const KeepaliveFlag = Object.assign({}, _KeepaliveFlag, FrameFlag);
+/** Numeric bitmask accepted by a KEEPALIVE frame. */
 export type KeepaliveFlag = FrameFlag | _KeepaliveFlag;
 
 /**
@@ -69,6 +75,7 @@ enum _ExtensionFlag {
  * Flags applicable to EXT (extension) frames.
  */
 export const ExtensionFlag = Object.assign({}, _ExtensionFlag, FrameFlag);
+/** Numeric bitmask accepted by an EXT frame. */
 export type ExtensionFlag = FrameFlag | _ExtensionFlag;
 
 /**
@@ -89,6 +96,7 @@ enum _SetupFlag {
  * Flags applicable to SETUP frames.
  */
 export const SetupFlag = Object.assign({}, _SetupFlag, FrameFlag);
+/** Numeric bitmask accepted by a SETUP frame. */
 export type SetupFlag = FrameFlag | _SetupFlag;
 
 /**
@@ -105,18 +113,21 @@ enum FollowsFlag {
  * Flags applicable to [FIRE_AND_FORGET]{@link RequestFireAndForgetFrame} frames.
  */
 export const FireAndForgetFlag = Object.assign({}, FollowsFlag, FrameFlag);
+/** Numeric bitmask accepted by a REQUEST_FNF frame. */
 export type FireAndForgetFlag = FrameFlag | FollowsFlag;
 
 /**
  * Flags applicable to [REQUEST_RESPONSE]{@link RequestResponseFrame} frames (same as [FIRE_AND_FORGET]{@link RequestFireAndForgetFrame}.
  */
 export const RequestResponseFlag = FireAndForgetFlag;
+/** Numeric bitmask accepted by a REQUEST_RESPONSE frame. */
 export type RequestResponseFlag = FireAndForgetFlag
 
 /**
  * Flags applicable to [REQUEST_STREAM]{@link RequestStreamFrame} frames (same as  [REQUEST_RESPONSE]{@link RequestResponseFrame}).
  */
 export const RequestStreamFlag = RequestResponseFlag;
+/** Numeric bitmask accepted by a REQUEST_STREAM frame. */
 export type RequestStreamFlag = RequestResponseFlag;
 
 /**
@@ -140,10 +151,12 @@ enum _PayloadFlag {
  * Flags applicable to [REQUEST_CHANNEL]{@link RequestChannelFrame} frames.
  */
 export const RequestChannelFlag = Object.assign({}, FollowsFlag, CompleteFlag, FrameFlag);
+/** Numeric bitmask accepted by a REQUEST_CHANNEL frame. */
 export type RequestChannelFlag = FrameFlag | FollowsFlag | CompleteFlag;
 
 /**
  * Flags applicable to [PAYLOAD]{@link PayloadFrame} frames.
  */
 export const PayloadFlag = Object.assign({}, _PayloadFlag, RequestChannelFlag);
+/** Numeric bitmask accepted by a PAYLOAD frame. */
 export type PayloadFlag = _PayloadFlag | RequestChannelFlag;

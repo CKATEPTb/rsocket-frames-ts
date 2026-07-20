@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {FrameFlag} from "@/frame/FrameFlag";
@@ -41,9 +41,13 @@ export class MetadataPushFrame extends Frame {
      * Constructs a new `MetadataPushFrame` with given metadata.
      *
      * @param {Metadata<any>} metadata - The metadata to push.
+     * @param streamId Wire stream ID. Outgoing frames should keep the default `0`.
      */
-    public constructor(metadata: Metadata<any>) {
-        super(FrameType.METADATA_PUSH, 0, FrameFlag.METADATA, metadata, undefined);
+    public constructor(metadata: Metadata<any>, streamId = 0) {
+        super(FrameType.METADATA_PUSH, streamId, FrameFlag.METADATA, metadata, undefined, false);
+        if (metadata === undefined) {
+            throw new TypeError("METADATA_PUSH requires metadata");
+        }
     }
 
 
@@ -56,8 +60,11 @@ export class MetadataPushFrame extends Frame {
      * @param {MimeType} __ - Payload type (ignored).
      * @returns {MetadataPushFrame} Parsed frame instance.
      */
-    public static from(_: Header, reader: ByteReader, metadataType: MimeType, __: MimeType): MetadataPushFrame {
-        return new MetadataPushFrame(metadataType.toMetadata(reader, false))
+    public static from(header: Header, reader: ByteReader, metadataType: MimeType, __: MimeType): MetadataPushFrame {
+        if (!header.isFlagSet(FrameFlag.METADATA)) {
+            throw new RangeError("METADATA_PUSH must set the METADATA flag");
+        }
+        return new MetadataPushFrame(metadataType.toMetadata(reader, false), header.streamId)
     }
 
     /**
@@ -74,7 +81,7 @@ export class MetadataPushFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false
     }
 
@@ -83,7 +90,7 @@ export class MetadataPushFrame extends Frame {
      *
      * @returns {true}
      */
-    public hasMetadata(): boolean {
+    public override hasMetadata(): boolean {
         return true
     }
 }

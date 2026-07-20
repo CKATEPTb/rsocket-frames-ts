@@ -29,20 +29,23 @@ export enum FrameErrorCode {
     RESERVED_ONE = 0xFFFFFFFF
 }
 
+/** Lookup helpers for standard and application-defined error codes. */
 export namespace FrameErrorCode {
     /**
      * Resolves a FrameErrorCode from a numeric byte value.
      * Matches the code exactly (no bitmask logic).
      *
-     * @param {number} byte - The byte value to interpret as a FrameErrorCode.
-     * @returns {FrameErrorCode | undefined} The matching FrameErrorCode, or `undefined` if no match.
+     * Application-defined codes are preserved because the protocol reserves
+     * `0x00000301..0xFFFFFFFE` for that purpose.
+     *
+     * @param {number} byte - The unsigned 32-bit error code.
+     * @returns {FrameErrorCode} A standard or application-defined error code.
+     * @throws {RangeError} If the value does not fit in 32 bits.
      */
     export function fromByte(byte: number): FrameErrorCode {
-        return Array.from(Object.entries(FrameErrorCode))
-            .filter(([key, _]) => Number.isNaN(Number(key)))
-            .filter(([_, value]) => (byte & value as number) == value)
-            .map(([_, value]) => value)
-            .reverse()
-            .shift() as FrameErrorCode
+        if (!Number.isInteger(byte) || byte < 0 || byte > 0xffffffff) {
+            throw new RangeError(`Error code must be an unsigned 32-bit integer; received ${byte}`)
+        }
+        return byte as FrameErrorCode
     }
 }

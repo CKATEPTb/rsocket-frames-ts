@@ -1,8 +1,9 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {Header} from "@/frame/context/Header";
 import {MimeType} from "@/mimetype/MimeType";
+import {assertBigInt, MAX_UINT_63} from "@/utils";
 
 /**
  * #### RESUME_OK Frame (0x0E)
@@ -39,6 +40,7 @@ export class ResumeOkFrame extends Frame {
         public readonly lastReceivedClientPosition: bigint
     ) {
         super(FrameType.RESUME_OK, 0);
+        assertBigInt("Last received client position", lastReceivedClientPosition, 0n, MAX_UINT_63)
     }
 
     /**
@@ -70,7 +72,7 @@ export class ResumeOkFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false;
     }
 
@@ -79,7 +81,7 @@ export class ResumeOkFrame extends Frame {
      *
      * @returns {false}
      */
-    public hasMetadata(): boolean {
+    public override hasMetadata(): boolean {
         return false;
     }
 }

@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {FireAndForgetFlag} from "@/frame/FrameFlag";
@@ -84,7 +84,7 @@ export class RequestFireAndForgetFrame extends Frame {
      *
      * @param {ByteWriter} _ - Writer (unused in this method).
      */
-    public isFlagSet(flag: FireAndForgetFlag): boolean {
+    public override isFlagSet(flag: FireAndForgetFlag): boolean {
         return super.isFlagSet(flag)
     }
 
@@ -94,7 +94,7 @@ export class RequestFireAndForgetFrame extends Frame {
      *
      * @param {ByteWriter} _ - Writer (unused in this method).
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false;
     }
 

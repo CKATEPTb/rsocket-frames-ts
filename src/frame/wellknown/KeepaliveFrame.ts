@@ -1,10 +1,11 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {Payload} from "@/frame/context/Payload";
 import {Header} from "@/frame/context/Header";
 import {KeepaliveFlag} from "@/frame/FrameFlag";
 import {MimeType} from "@/mimetype/MimeType";
+import {assertBigInt, MAX_UINT_63} from "@/utils";
 
 /**
  * ### KEEPALIVE Frame (0x03)
@@ -59,10 +60,11 @@ export class KeepaliveFrame extends Frame {
      */
     constructor(
         flags: KeepaliveFlag = KeepaliveFlag.NONE,
-        private readonly lastReceivedPosition: bigint = 0n,
+        public readonly lastReceivedPosition: bigint = 0n,
         payload?: Payload<any>
     ) {
         super(FrameType.KEEPALIVE, 0, flags, undefined, payload);
+        assertBigInt("Last received position", lastReceivedPosition, 0n, MAX_UINT_63)
     }
 
     /**
@@ -91,7 +93,7 @@ export class KeepaliveFrame extends Frame {
      * @param {MimeType} payloadType - Used to deserialize payload.
      * @returns {KeepaliveFrame} Parsed frame.
      */
-    public isFlagSet(flag: KeepaliveFlag): boolean {
+    public override isFlagSet(flag: KeepaliveFlag): boolean {
         return super.isFlagSet(flag)
     }
 
@@ -109,7 +111,7 @@ export class KeepaliveFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false
     }
 
@@ -118,7 +120,7 @@ export class KeepaliveFrame extends Frame {
      *
      * @returns {false}
      */
-    public hasMetadata(): boolean {
+    public override hasMetadata(): boolean {
         return false
     }
 
