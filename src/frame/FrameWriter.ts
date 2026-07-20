@@ -1,4 +1,4 @@
-import {ByteWriter} from "bebyte";
+import type {ByteWriter} from "bebyte";
 
 /**
  * Abstract base class for writing frame content to a binary stream.

@@ -1,7 +1,8 @@
-import bebyte, {ByteReader} from "bebyte";
-import {decode, encode} from "@/utils";
+import type {ByteReader} from "bebyte";
 import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
+import {createReader, createWriter} from "@/binary";
+import {decodeCustomType, encodeCustomType} from "@/mimetype/encoding";
 
 /**
  * # Composite Metadata Extension
@@ -51,31 +52,18 @@ export class RSocketComposite extends MimeType<Array<Metadata<any>>> {
      * @param {Array<Metadata<any>>} payloads - Metadata entries to encode.
      * @returns {Metadata<Array<Metadata<any>>>} Composite metadata wrapper.
      */
-    protected serializeMetadata(payloads: Array<Metadata<any>>): Metadata<Array<Metadata<any>>> {
-        return new class RSocketCompositeMetadata extends Metadata<Array<Metadata<any>>> {
-            /**
-             * Encodes all metadata entries into a single `Uint8Array`, preserving their MIME type and order.
-             *
-             * For each entry:
-             * - Adds MIME ID or MIME string
-             * - Adds 3-byte metadata length
-             * - Appends actual metadata
-             *
-             * @returns {Uint8Array} The composite metadata block.
-             */
-            public toUint8Array(): Uint8Array {
-                return payloads.reduce((acc, payload) => {
-                    if (payload.mimeType.isWellKnown) acc.i8(128 | payload.mimeType.identifier!)
-                    else {
-                        const type = encode(payload.mimeType.mimeType)
-                        acc.i7(type.length)
-                        acc.write(type)
-                    }
-                    payload.write(acc, true)
-                    return acc
-                }, bebyte.writer()).toUint8Array()
+    protected override serializeMetadata(payloads: Array<Metadata<any>>): Metadata<Array<Metadata<any>>> {
+        const writer = createWriter()
+        for (const payload of payloads) {
+            if (payload.mimeType.isWellKnown) writer.i8(128 | payload.mimeType.identifier!)
+            else {
+                const type = encodeCustomType(payload.mimeType.mimeType, "Composite metadata MIME type")
+                writer.i7(type.length - 1)
+                writer.write(type)
             }
-        }(this, payloads)
+            payload.write(writer, true)
+        }
+        return new Metadata(this, payloads, writer.toUint8Array())
     }
 
     /**
@@ -86,16 +74,18 @@ export class RSocketComposite extends MimeType<Array<Metadata<any>>> {
      * @param {boolean} [hasPayload=true] - Whether the payload is prefixed with a length (i24).
      * @returns {Metadata<Array<Metadata<any>>>} The reconstructed composite metadata object.
      */
-    protected deserializeMetadata(payloads: ByteReader, hasPayload: boolean = true): Metadata<Array<Metadata<any>>> {
-        const array = hasPayload ? payloads.read(payloads.i24()) : payloads.readRemaining();
-        const buffer = bebyte.reader(array);
+    protected override deserializeMetadata(payloads: ByteReader, hasPayload: boolean = true): Metadata<Array<Metadata<any>>> {
+        const array = hasPayload ? payloads.viewBytes(payloads.i24()) : payloads.viewRemaining();
+        const buffer = createReader(array);
         const deserialized: Array<Metadata<any>> = []
         while (buffer.offset < array.length) {
             const i8 = buffer.i8()
             const i7 = i8 & 0x7F
-            const mimeType = i8 >> 7 ? MimeType.valueOf(i7) : MimeType.valueOf(decode(buffer.read(i7)))
+            const mimeType = i8 >> 7
+                ? MimeType.valueOf(i7)
+                : MimeType.valueOf(decodeCustomType(i7, length => buffer.viewBytes(length)))
             deserialized.push(mimeType.toMetadata(buffer, true))
         }
-        return new Metadata(this, deserialized)
+        return new Metadata(this, deserialized, array)
     }
 }

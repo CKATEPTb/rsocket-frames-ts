@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {RequestChannelFlag} from "@/frame/FrameFlag";
@@ -6,6 +6,7 @@ import {Payload} from "@/frame/context/Payload";
 import {Header} from "@/frame/context/Header";
 import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
+import {assertInteger, MAX_UINT_31} from "@/utils";
 
 /**
  * ### REQUEST_CHANNEL Frame (0x07)
@@ -55,6 +56,7 @@ export class RequestChannelFrame extends Frame {
         payload?: Payload<any>
     ) {
         super(FrameType.REQUEST_CHANNEL, streamId, flags, metadata, payload);
+        assertInteger("Initial request N", request, 1, MAX_UINT_31)
     }
 
     /**
@@ -92,7 +94,7 @@ export class RequestChannelFrame extends Frame {
      * @param {RequestChannelFlag} flag - The flag to check.
      * @returns {boolean} `true` if set.
      */
-    public isFlagSet(flag: RequestChannelFlag): boolean {
+    public override isFlagSet(flag: RequestChannelFlag): boolean {
         return super.isFlagSet(flag)
     }
 
@@ -101,7 +103,7 @@ export class RequestChannelFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false;
     }
 

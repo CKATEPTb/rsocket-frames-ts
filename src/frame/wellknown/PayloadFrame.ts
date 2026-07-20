@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {PayloadFlag} from "@/frame/FrameFlag";
@@ -102,7 +102,7 @@ export class PayloadFrame extends Frame {
      * @param {PayloadFlag} flag - The flag to check.
      * @returns {boolean} `true` if the flag is set.
      */
-    public isFlagSet(flag: PayloadFlag): boolean {
+    public override isFlagSet(flag: PayloadFlag): boolean {
         return super.isFlagSet(flag)
     }
 
@@ -111,7 +111,7 @@ export class PayloadFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false;
     }
 

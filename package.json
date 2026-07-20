@@ -1,49 +1,52 @@
 {
   "name": "rsocket-frames-ts",
-  "version": "1.0.9",
-  "description": "RSocket frame codec implemented with Uint8Array. Supports full spec, metadata extensions, and browser compatibility.",
+  "version": "2.0.0",
+  "description": "Transport-aware RSocket frame codec for WebSocket and TCP, implemented with Uint8Array.",
+  "type": "module",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "pnpm run test && tsup src/index.ts",
-    "start": "tsx src/start.ts",
-    "start:watch": "tsx watch src/start.ts",
-    "test": "jest --config jest.config.ts",
-    "test:watch": "jest --config jest.config.ts --watch"
+    "test": "tsc -p tsconfig.json --noEmit && vitest run",
+    "build": "node scripts/clean-dist.mjs && vite build && tsc -p tsconfig.build.json --emitDeclarationOnly && node scripts/rewrite-dts-aliases.mjs"
   },
   "author": "fakeivchenko, CKATEPTb",
-  "license": "LGPL-3.0-only",
+  "license": "MIT",
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
   "devDependencies": {
-    "@types/jest": "^29.5.14",
-    "@types/node": "^22.15.21",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.3.4",
-    "ts-node": "^10.9.2",
-    "tsup": "^8.5.0",
-    "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   },
   "keywords": [
     "rsocket",
     "protocol",
     "frame",
+    "tcp",
+    "websocket",
     "uint8array",
     "typescript",
     "spec"
   ],
   "files": [
-    "dist"
+    "dist",
+    "LICENSE.md",
+    "README.md"
   ],
-  "packageManager": "pnpm@10.11.0+sha512.6540583f41cc5f628eb3d9773ecee802f4f9ef9923cc45b69890fb47991d4b092964694ec3a4f738a420c918a333062c8b925d312f42e4f0c263eb603551f977",
   "dependencies": {
-    "bebyte": "^1.0.2"
+    "bebyte": "^3.0.0"
   }
 }

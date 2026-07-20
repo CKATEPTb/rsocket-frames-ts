@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {Header} from "@/frame/context/Header";

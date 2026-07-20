@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {decode, encode} from "@/utils";
 import {Frame} from "@/frame/Frame";
 import {Payload} from "@/frame/context/Payload";
@@ -7,6 +7,7 @@ import {MimeType} from "@/mimetype/MimeType";
 import {SetupFlag} from "@/frame/FrameFlag";
 import {Header} from "@/frame/context/Header";
 import {Metadata} from "@/frame/context/Metadata";
+import {assertByteLength, assertInteger, MAX_UINT_31} from "@/utils";
 
 /**
  * ### SETUP Frame (0x01)
@@ -106,8 +107,18 @@ export class SetupFrame extends Frame {
         metadata?: Metadata<any>,
         payload?: Payload<any>
     ) {
-        flags = SetupFlag.combine(flags, resumeToken != undefined ? SetupFlag.RESUME : SetupFlag.NONE)
+        flags = SetupFlag.combine(flags, resumeToken !== undefined ? SetupFlag.RESUME : SetupFlag.NONE)
         super(FrameType.SETUP, 0, flags, metadata, payload)
+        assertInteger("Keepalive interval", keepalive, 1, MAX_UINT_31)
+        assertInteger("Maximum lifetime", lifetime, 1, MAX_UINT_31)
+        assertInteger("Major version", majorVersion, 0, 0xffff)
+        assertInteger("Minor version", minorVersion, 0, 0xffff)
+        assertByteLength("Metadata MIME type", encode(metadataType.mimeType).length, 1, 0xff)
+        assertByteLength("Data MIME type", encode(dataType.mimeType).length, 1, 0xff)
+        if (this.hasResume()) {
+            if (resumeToken === undefined) throw new TypeError("Resume flag requires a resume token")
+            assertByteLength("Resume token", encode(resumeToken).length, 0, 0xffff)
+        }
     }
 
     /**
@@ -124,9 +135,9 @@ export class SetupFrame extends Frame {
         const minor = reader.i16()
         const keepalive = reader.i32()
         const lifetime = reader.i32()
-        const resumeToken = header.isFlagSet(SetupFlag.RESUME) ? decode(reader.read(reader.i16())) : undefined
-        const metadataType = MimeType.valueOf(decode(reader.read(reader.i8())))
-        const dataType = MimeType.valueOf(decode(reader.read(reader.i8())))
+        const resumeToken = header.isFlagSet(SetupFlag.RESUME) ? decode(reader.viewBytes(reader.i16())) : undefined
+        const metadataType = MimeType.valueOf(decode(reader.viewBytes(reader.i8())))
+        const dataType = MimeType.valueOf(decode(reader.viewBytes(reader.i8())))
         const metadata = header.isFlagSet(SetupFlag.METADATA) ? metadataType.toMetadata(reader) : undefined
         const payload = dataType.toPayload(reader)
         return new SetupFrame(keepalive, lifetime, metadataType, dataType, resumeToken, major, minor, header.flags, metadata, payload)
@@ -146,7 +157,7 @@ export class SetupFrame extends Frame {
         writer.i31(this.keepalive)
         writer.i31(this.lifetime)
         if (this.hasResume()) {
-            const resumeToken = encode(this.resumeToken)
+            const resumeToken = encode(this.resumeToken!)
             writer.i16(resumeToken.length)
             writer.write(resumeToken)
         }
@@ -163,7 +174,7 @@ export class SetupFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false
     }
 

@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {RequestStreamFlag} from "@/frame/FrameFlag";
@@ -6,6 +6,7 @@ import {Payload} from "@/frame/context/Payload";
 import {Header} from "@/frame/context/Header";
 import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
+import {assertInteger, MAX_UINT_31} from "@/utils";
 
 /**
  *
@@ -56,6 +57,7 @@ export class RequestStreamFrame extends Frame {
         payload?: Payload<any>
     ) {
         super(FrameType.REQUEST_STREAM, streamId, flags, metadata, payload);
+        assertInteger("Initial request N", request, 1, MAX_UINT_31)
     }
 
     /**
@@ -92,7 +94,7 @@ export class RequestStreamFrame extends Frame {
      * @param {RequestStreamFlag} flag - The flag to test.
      * @returns {boolean} True if the flag is set.
      */
-    public isFlagSet(flag: RequestStreamFlag): boolean {
+    public override isFlagSet(flag: RequestStreamFlag): boolean {
         return super.isFlagSet(flag)
     }
 
@@ -102,7 +104,7 @@ export class RequestStreamFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false;
     }
 

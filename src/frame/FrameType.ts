@@ -40,22 +40,32 @@ export enum FrameType {
     EXT = 0x3F
 }
 
+/** Parsing helpers for the six-bit frame type field. */
 export namespace FrameType {
     /**
      * Attempts to determine the `FrameType` based on the given byte value.
      *
-     * This performs a best-match lookup by applying bitmask matching
-     * in reverse order of definition, favoring the most specific match.
-     *
      * @param {number} byte - The raw frame type byte value.
-     * @returns {FrameType} The corresponding `FrameType` enum value.
+     * @returns {FrameType} The corresponding assigned frame type.
+     * @throws {RangeError} If the six-bit value is unassigned by the protocol.
      */
     export function fromByte(byte: number): FrameType {
-        return Array.from(Object.entries(FrameType))
-            .filter(([key, _]) => Number.isNaN(Number(key)))
-            .filter(([_, value]) => (byte & value as number) == value)
-            .map(([_, value]) => value)
-            .reverse()
-            .shift() as FrameType
+        const value = fromWireByte(byte);
+        if (value <= FrameType.RESUME_OK || value === FrameType.EXT) return value;
+        throw new RangeError(`Unknown RSocket frame type: 0x${byte.toString(16).padStart(2, "0")}`)
+    }
+
+    /**
+     * Parses any six-bit wire value, including unassigned ignorable types.
+     *
+     * @param byte Raw six-bit frame-type field.
+     * @returns Validated wire value represented as `FrameType`.
+     * @throws {RangeError} If the value does not fit in six bits.
+     */
+    export function fromWireByte(byte: number): FrameType {
+        if (!Number.isInteger(byte) || byte < 0 || byte > 0x3f) {
+            throw new RangeError(`Frame type must be an unsigned 6-bit integer; received ${byte}`)
+        }
+        return byte as FrameType;
     }
 }

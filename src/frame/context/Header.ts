@@ -1,7 +1,9 @@
 import {FrameType} from "@/frame/FrameType";
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {FrameFlag} from "@/frame/FrameFlag";
 import {FrameWriter} from "@/frame/FrameWriter";
+import {assertInteger, MAX_UINT_31} from "@/utils";
+import {assertFixedConnectionStream} from "@/frame/validation";
 
 /**
  * ### Frame Header Format
@@ -37,11 +39,15 @@ export class Header extends FrameWriter {
      * @param {FrameFlag} flags - Bitmask of frame flags (10 bits max).
      */
     constructor(
-        public readonly frameType: FrameType,  // (31 bits = max value 2^31-1 = 2,147,483,647) Unsigned 31-bit integer representing the stream Identifier for this frame or 0 to indicate the entire connection.
-        public readonly streamId: number, // 6 bits = max value 63) Type of Frame.
-        public readonly flags: FrameFlag // flags (10 bits) Any Flag bit not specifically indicated in the frame type should be set to 0 when sent and not interpreted on reception. Flags generally depend on Frame Type, but all frame types MUST provide space for the following flags
+        public readonly frameType: FrameType,
+        public readonly streamId: number,
+        public readonly flags: FrameFlag
     ) {
         super()
+        FrameType.fromWireByte(frameType)
+        assertInteger("Stream ID", streamId, 0, MAX_UINT_31)
+        assertInteger("Frame flags", flags, 0, 0x03ff)
+        assertFixedConnectionStream(frameType, streamId)
     }
 
     /**
@@ -53,7 +59,7 @@ export class Header extends FrameWriter {
     public static from(reader: ByteReader): Header {
         const streamId = reader.i32()
         const frameTypeAndFlagsByte = reader.i16()
-        const frameType = FrameType.fromByte(frameTypeAndFlagsByte >> 10)
+        const frameType = FrameType.fromWireByte(frameTypeAndFlagsByte >> 10)
         const flags = frameTypeAndFlagsByte & 0x03FF
         return new Header(frameType, streamId, flags)
     }
@@ -65,7 +71,7 @@ export class Header extends FrameWriter {
      * @returns {boolean} True if the flag is set.
      */
     public isFlagSet(flag: FrameFlag): boolean {
-        return (this.flags & flag) == flag
+        return (this.flags & flag) === flag
     }
 
     /**

@@ -1,9 +1,10 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {decode, encode} from "@/utils";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {Header} from "@/frame/context/Header";
 import {MimeType} from "@/mimetype/MimeType";
+import {assertBigInt, assertByteLength, assertInteger, MAX_UINT_63} from "@/utils";
 
 /**
  * #### RESUME Frame (0x0D)
@@ -63,6 +64,11 @@ export class ResumeFrame extends Frame {
         public readonly minorVersion: number = 0
     ) {
         super(FrameType.RESUME, 0)
+        assertByteLength("Resume token", encode(resumeToken).length, 0, 0xffff)
+        assertBigInt("Last received server position", lastReceivedServerPosition, 0n, MAX_UINT_63)
+        assertBigInt("First available client position", firstAvailableClientPosition, 0n, MAX_UINT_63)
+        assertInteger("Major version", majorVersion, 0, 0xffff)
+        assertInteger("Minor version", minorVersion, 0, 0xffff)
     }
 
     /**
@@ -77,7 +83,7 @@ export class ResumeFrame extends Frame {
     public static from(_: Header, reader: ByteReader, __: MimeType, ___: MimeType): ResumeFrame {
         const major = reader.i16()
         const minor = reader.i16()
-        const resumeToken = decode(reader.read(reader.i16()))
+        const resumeToken = decode(reader.viewBytes(reader.i16()))
         const lastReceivedServerPosition = reader.i64()
         const firstAvailableClientPosition = reader.i64()
         return new ResumeFrame(resumeToken, lastReceivedServerPosition, firstAvailableClientPosition, major, minor)
@@ -105,7 +111,7 @@ export class ResumeFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false;
     }
 
@@ -114,7 +120,7 @@ export class ResumeFrame extends Frame {
      *
      * @returns {false}
      */
-    public hasMetadata(): boolean {
+    public override hasMetadata(): boolean {
         return false;
     }
 }

@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {Frame} from "@/frame/Frame";
 import {FrameType} from "@/frame/FrameType";
 import {FrameErrorCode} from "@/frame/FrameErrorCode";
@@ -6,6 +6,7 @@ import {Header} from "@/frame/context/Header";
 import {FrameFlag} from "@/frame/FrameFlag";
 import {MimeType} from "@/mimetype/MimeType";
 import {Payload} from "@/frame/context/Payload";
+import {assertErrorStreamScope} from "@/frame/validation";
 
 /**
  * ### ERROR Frame (0x0B)
@@ -80,6 +81,8 @@ export class ErrorFrame extends Frame {
         payload?: Payload<any>
     ) {
         super(FrameType.ERROR, streamId, FrameFlag.NONE, undefined, payload);
+        FrameErrorCode.fromByte(code);
+        assertErrorStreamScope(code, streamId);
     }
 
     /**
@@ -95,7 +98,7 @@ export class ErrorFrame extends Frame {
         return new ErrorFrame(
             header.streamId,
             FrameErrorCode.fromByte(reader.i32()),
-            payloadType.toPayload(reader.readRemaining())
+            payloadType.toPayload(reader)
         )
     }
 
@@ -113,7 +116,7 @@ export class ErrorFrame extends Frame {
      *
      * @returns {false}
      */
-    public canBeIgnored(): boolean {
+    public override canBeIgnored(): boolean {
         return false
     }
 
@@ -122,7 +125,7 @@ export class ErrorFrame extends Frame {
      *
      * @returns {false}
      */
-    public hasMetadata(): boolean {
+    public override hasMetadata(): boolean {
         return false
     }
 }

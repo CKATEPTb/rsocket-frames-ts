@@ -1,10 +1,45 @@
-import bebyte from "bebyte";
 import {Header} from "@/frame/context/Header";
-import {Payload} from "@/frame/context/Payload";
+import type {Payload} from "@/frame/context/Payload";
 import {FrameType} from "@/frame/FrameType";
 import {FrameFlag} from "@/frame/FrameFlag";
 import {FrameWriter} from "@/frame/FrameWriter";
-import {Metadata} from "@/frame/context/Metadata";
+import type {Metadata} from "@/frame/context/Metadata";
+import {createWriter} from "@/binary";
+import {MAX_FRAME_SIZE} from "@/frame/transport/constants";
+import {assertFrameSize} from "@/frame/transport/framing";
+
+const serializedFrames = new WeakMap<Frame, Uint8Array>();
+const serializeBytes = Symbol("serializeBytes");
+
+/**
+ * Serializes a frame with optional transport-prefix capacity in one allocation.
+ * This helper is internal and intentionally omitted from the package barrel.
+ */
+export function serializeFrame(
+    frame: Frame,
+    prefixLength: 0 | 3,
+    maximum = MAX_FRAME_SIZE
+): Uint8Array {
+    const serialized = serializedFrames.get(frame);
+    if (serialized !== undefined || frame.toUint8Array !== Frame.prototype.toUint8Array) {
+        const raw = frame.toUint8Array();
+        assertFrameSize(raw.length, maximum);
+        if (prefixLength === 0) return raw;
+        const result = new Uint8Array(raw.length + 3);
+        result[0] = raw.length >>> 16;
+        result[1] = raw.length >>> 8;
+        result[2] = raw.length;
+        result.set(raw, 3);
+        return result;
+    }
+    return frame[serializeBytes](prefixLength, maximum);
+}
+
+/** Associates a decoded frame with its original wire view. */
+export function rememberSerializedFrame(frame: Frame, bytes: Uint8Array): Frame {
+    serializedFrames.set(frame, bytes);
+    return frame;
+}
 
 /**
  * Abstract base class representing an RSocket frame.
@@ -33,19 +68,26 @@ export abstract class Frame extends FrameWriter {
      * @param {FrameFlag} [flags=FrameFlag.NONE] - Initial frame flags.
      * @param {Metadata<any>} [metadata] - Optional metadata section.
      * @param {Payload<any>} [payload] - Optional payload section.
+     * @param normalizeMetadataFlag Whether metadata should add the metadata flag.
+     * Internal unknown-frame decoding disables normalization to preserve flags verbatim.
      */
     protected constructor(
         type: FrameType,
         streamId: number,
         flags: FrameFlag = FrameFlag.NONE,
         public readonly metadata?: Metadata<any>,
-        public readonly payload?: Payload<any>
+        public readonly payload?: Payload<any>,
+        normalizeMetadataFlag = true
     ) {
         super()
+        const hasMetadata = this.metadata !== undefined
+        const normalizedFlags = normalizeMetadataFlag && hasMetadata
+            ? flags | FrameFlag.METADATA
+            : flags
         this.header = new Header(
             type,
             streamId,
-            FrameFlag.combine(flags, this.metadata != null ? FrameFlag.METADATA : FrameFlag.NONE)
+            normalizedFlags
         )
     }
 
@@ -98,17 +140,48 @@ export abstract class Frame extends FrameWriter {
      *
      * @returns {Uint8Array} Serialized binary representation of the frame.
      *
-     * @remarks
-     * Implementations may impose frame size limits (e.g. 65535 bytes in Java).
-     * This method does **not** enforce length limits; check before sending.
+     * This is the raw RSocket representation. Use `FrameCodec` when transport
+     * framing must be applied for WebSocket or TCP.
+     *
+     * @throws {RangeError} If the frame exceeds the protocol maximum.
      */
     public toUint8Array(): Uint8Array {
-        const writer = bebyte.writer()
+        const serialized = serializedFrames.get(this);
+        if (serialized !== undefined) return serialized;
+        return this[serializeBytes](0, MAX_FRAME_SIZE);
+    }
+
+    /** Serializes this frame with optional space reserved for a transport prefix. */
+    private [serializeBytes](prefixLength: 0 | 3, maximum: number): Uint8Array {
+        const writer = createWriter()
+        if (prefixLength !== 0) writer.offset = prefixLength;
         this.header.write(writer)
         this.write(writer)
-        this.metadata?.write?.(writer, this.type != FrameType.LEASE && this.type != FrameType.METADATA_PUSH)
-        this.payload?.write?.(writer)
-        // TODO в каждой реализации может быть разный frame length limit, в java например это 65535, нужно проверить длину перед отправкой
-        return writer.toUint8Array()
+        const metadataHasLength = this.type !== FrameType.LEASE && this.type !== FrameType.METADATA_PUSH;
+        const metadata = this.metadata !== undefined && this.metadata !== null
+            ? this.metadata.toUint8Array()
+            : undefined;
+        const payload = this.payload?.toUint8Array();
+        const emptyMetadataLength = metadata === undefined && this.hasMetadata() && metadataHasLength ? 3 : 0;
+        const frameLength = writer.length - prefixLength
+            + (metadata?.length ?? 0)
+            + (metadata !== undefined && metadataHasLength ? 3 : emptyMetadataLength)
+            + (payload?.length ?? 0);
+        assertFrameSize(frameLength, maximum)
+
+        if (metadata !== undefined) {
+            if (metadataHasLength) writer.i24(metadata.length)
+            writer.write(metadata)
+        } else if (this.hasMetadata() && metadataHasLength) {
+            writer.i24(0)
+        }
+        if (payload !== undefined) writer.write(payload)
+        const result = writer.toUint8Array()
+        if (prefixLength !== 0) {
+            result[0] = frameLength >>> 16;
+            result[1] = frameLength >>> 8;
+            result[2] = frameLength;
+        }
+        return result
     }
 }

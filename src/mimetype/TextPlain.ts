@@ -1,26 +1,36 @@
 import {MimeType} from "@/mimetype/MimeType";
-import {ByteReader} from "bebyte";
-import {Metadata} from "@/frame/context/Metadata";
-import {Payload} from "@/frame/context/Payload";
+import type {ByteReader} from "bebyte";
+import type {Metadata} from "@/frame/context/Metadata";
+import type {Payload} from "@/frame/context/Payload";
+import {decode, encode} from "@/utils";
 
-export class TextPlain<T = string> extends MimeType<T> {
-    protected serializePayload(payload: T): Payload<T> {
-        return super.serializePayload(new TextEncoder().encode(payload as unknown as string) as unknown as T);
+/** MIME codec for UTF-8 plain-text data and metadata. */
+export class TextPlain<T extends string = string> extends MimeType<T> {
+    /** Encodes a string as a data payload. */
+    protected override serializePayload(payload: T): Payload<T> {
+        return super.serializePayload(encode(this.string(payload)) as unknown as T);
     }
 
-    protected deserializePayload(payload: ByteReader): Payload<T> {
-        const raw = payload.readRemaining();
-        if (raw.length === 0) return undefined as unknown as Payload<T>;
-        return new TextDecoder().decode(raw) as unknown as Payload<T>;
+    /** Decodes all remaining payload bytes as UTF-8 text. */
+    protected override deserializePayload(payload: ByteReader): Payload<T> {
+        const raw = payload.viewRemaining();
+        return (raw.length === 0 ? undefined : decode(raw)) as unknown as Payload<T>;
     }
 
-    protected serializeMetadata(payload: T): Metadata<T> {
-        return super.serializeMetadata(new TextEncoder().encode(payload as unknown as string) as unknown as T);
+    /** Encodes a string as metadata. */
+    protected override serializeMetadata(payload: T): Metadata<T> {
+        return super.serializeMetadata(encode(this.string(payload)) as unknown as T);
     }
 
-    protected deserializeMetadata(payload: ByteReader, hasPayload: boolean = true): Metadata<T> {
-        const raw = hasPayload ? payload.read(payload.i24()) : payload.readRemaining();
-        if (raw.length === 0) return undefined as unknown as Metadata<T>;
-        return new TextDecoder().decode(raw) as unknown as Metadata<T>;
+    /** Decodes a length-delimited or metadata-only UTF-8 string. */
+    protected override deserializeMetadata(payload: ByteReader, hasPayload: boolean = true): Metadata<T> {
+        const raw = hasPayload ? payload.viewBytes(payload.i24()) : payload.viewRemaining();
+        return decode(raw) as unknown as Metadata<T>;
+    }
+
+    /** Validates the runtime value before passing it to `TextEncoder`. */
+    private string(payload: T): string {
+        if (typeof payload !== "string") throw new TypeError("Text payload must be a string");
+        return payload;
     }
 }
