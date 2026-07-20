@@ -1,7 +1,7 @@
 # rsocket-frames-ts
 
-ESM-only TypeScript codecs for RSocket 1.0 frames and metadata. The package
-supports raw frames for WebSocket and length-prefixed frames for TCP.
+Encode and decode [RSocket Protocol 1.0 frames](https://github.com/rsocket/rsocket/blob/master/Protocol.md)
+and metadata over WebSocket or TCP.
 
 ## Install
 
@@ -9,9 +9,7 @@ supports raw frames for WebSocket and length-prefixed frames for TCP.
 npm install rsocket-frames-ts
 ```
 
-`bebyte` is installed automatically. A separate installation is not required.
-
-## Create and decode a frame
+## WebSocket
 
 ```ts
 import {
@@ -31,41 +29,31 @@ const codec = new FrameCodec({
   }
 });
 
-const route = WellKnownMimeType.MESSAGE_RSOCKET_ROUTING.toMetadata([
-  "account.find"
+const metadata = metadataMime.toMetadata([
+  WellKnownMimeType.MESSAGE_RSOCKET_ROUTING.toMetadata(["account.find"])
 ]);
-const metadata = metadataMime.toMetadata([route]);
-const data = dataMime.toPayload({accountId: 42});
 
-const outgoing = new RequestResponseFrame(
+const request = new RequestResponseFrame(
   1,
   FrameFlag.NONE,
   metadata,
-  data
+  dataMime.toPayload({accountId: 42})
 );
 
-webSocket.send(codec.serialize(outgoing));
+webSocket.send(codec.serialize(request));
 
-const [incoming] = codec.deserialize(bytesFromWebSocket);
-
-if (incoming !== undefined) console.log(incoming.payload);
+const [response] = codec.deserialize(bytesFromWebSocket);
+if (response !== undefined) handleFrame(response);
 ```
 
-Use an odd stream ID for a client request and an even stream ID for a server
-request. The package validates wire field widths, frame sizes and truncated
-input. Interaction-level handling remains the caller's responsibility.
+Client-initiated streams use odd IDs. Server-initiated streams use even IDs.
 
 ## TCP
 
-Select `tcp` on the same codec. It adds the required three-byte frame length
-and handles split or coalesced socket reads internally.
+The same codec handles TCP's three-byte length prefix, partial reads and multiple
+frames received in one chunk.
 
 ```ts
-import {
-  FrameCodec,
-  WellKnownMimeType
-} from "rsocket-frames-ts";
-
 const codec = new FrameCodec({
   transport: "tcp",
   mimetype: {
@@ -74,12 +62,10 @@ const codec = new FrameCodec({
   }
 });
 
-socket.write(codec.serialize(outgoing));
+socket.write(codec.serialize(request));
 
 socket.on("data", chunk => {
-  for (const frame of codec.deserialize(chunk)) {
-    handleFrame(frame);
-  }
+  for (const frame of codec.deserialize(chunk)) handleFrame(frame);
 });
 
 socket.on("end", () => codec.finish());
@@ -88,43 +74,36 @@ socket.on("error", () => codec.reset());
 
 ## MIME types
 
-Every built-in codec is available through `WellKnownMimeType`.
+Built-in codecs are available through `WellKnownMimeType`.
 
-| Value type | Constants |
+| Data | Constants |
 | --- | --- |
-| JSON values | `APPLICATION_JSON`, `APPLICATION_CLOUDEVENTS_JSON` |
-| Strings | `APPLICATION_GRAPHQL`, `APPLICATION_JAVASCRIPT`, `APPLICATION_XML`, `TEXT_CSS`, `TEXT_CSV`, `TEXT_HTML`, `TEXT_PLAIN`, `TEXT_XML` |
-| Binary `Uint8Array` | `APPLICATION_AVRO`, `APPLICATION_CBOR`, `APPLICATION_GZIP`, `APPLICATION_OCTET_STREAM`, `APPLICATION_PDF`, `APPLICATION_THRIFT`, `APPLICATION_PROTOBUF`, `APPLICATION_ZIP`, `MULTIPART_MIXED`, all `AUDIO_*`, `IMAGE_*`, `VIDEO_*`, `APPLICATION_HESSIAN`, `APPLICATION_JAVA_OBJECT`, `APPLICATION_X_CAPNP`, `APPLICATION_X_FLATBUFFERS` |
+| JSON | `APPLICATION_JSON`, `APPLICATION_CLOUDEVENTS_JSON` |
+| Text | `APPLICATION_GRAPHQL`, `APPLICATION_JAVASCRIPT`, `APPLICATION_XML`, `TEXT_CSS`, `TEXT_CSV`, `TEXT_HTML`, `TEXT_PLAIN`, `TEXT_XML` |
+| Binary | `APPLICATION_AVRO`, `APPLICATION_CBOR`, `APPLICATION_GZIP`, `APPLICATION_OCTET_STREAM`, `APPLICATION_PDF`, `APPLICATION_PROTOBUF`, `APPLICATION_THRIFT`, `APPLICATION_ZIP`, `MULTIPART_MIXED`, `AUDIO_*`, `IMAGE_*`, `VIDEO_*` |
 | RSocket metadata | `MESSAGE_RSOCKET_MIMETYPE`, `MESSAGE_RSOCKET_ACCEPT_MIMETYPES`, `MESSAGE_RSOCKET_AUTHENTICATION`, `MESSAGE_RSOCKET_TRACING_ZIPKIN`, `MESSAGE_RSOCKET_ROUTING`, `MESSAGE_RSOCKET_COMPOSITE_METADATA` |
 
-`toPayload(value)` creates frame data and `toPayload(bytes)` decodes data.
-`toMetadata(value)` creates metadata. To decode standalone metadata bytes, use
-`toMetadata(bytes, false)`; `true` means the bytes start with an `i24` length.
+Use `toPayload` for frame data and `toMetadata` for metadata:
 
 ```ts
-const encoded = WellKnownMimeType.APPLICATION_JSON.toPayload({id: 1});
-const bytes = encoded.toUint8Array();
-
-const decoded = WellKnownMimeType.APPLICATION_JSON.toPayload(bytes);
-console.log(decoded.id);
+const payload = WellKnownMimeType.APPLICATION_JSON.toPayload({id: 1});
+const decoded = WellKnownMimeType.APPLICATION_JSON.toPayload(
+  payload.toUint8Array()
+);
 ```
 
-For an already encoded custom binary format, the generic codec is sufficient:
+Use a generic codec when values are already encoded:
 
 ```ts
 import {MimeType} from "rsocket-frames-ts";
 
 const msgpack = new MimeType<Uint8Array>("application/msgpack");
 const payload = msgpack.toPayload(encodedMsgpack);
-const metadata = msgpack.toMetadata(encodedMsgpack, false);
 ```
-
-Custom names are encoded as ASCII MIME strings. Numeric identifiers are only
-for values assigned by the RSocket well-known MIME registry.
 
 ## Routing and authentication
 
-Routing and authentication are separate entries inside composite metadata.
+Routing and authentication are entries in composite metadata.
 
 ```ts
 import {
@@ -147,7 +126,7 @@ const metadata =
   ]);
 ```
 
-Simple authentication is also available:
+Simple authentication uses the same metadata type:
 
 ```ts
 const auth = WellKnownMimeType.MESSAGE_RSOCKET_AUTHENTICATION.toMetadata(
@@ -158,77 +137,125 @@ const auth = WellKnownMimeType.MESSAGE_RSOCKET_AUTHENTICATION.toMetadata(
 );
 ```
 
-Simple credentials are cleartext inside the frame. Use `wss` or TLS-wrapped
-TCP.
+Use `wss` or TLS-wrapped TCP when sending credentials.
 
-## Implement a MIME codec
+## Custom MIME types
 
-Extend `MimeType<T>`. Serialization returns a `Payload<T>` or `Metadata<T>`;
-deserialization returns the application value. Creating the codec registers
-its name so composite metadata can resolve it while decoding.
+Every MIME codec extends `MimeType<T>` and implements four methods: serialization
+and deserialization for data, then serialization and deserialization for metadata.
+
+### Override `application/json`
+
+The following class implements the same behavior as the built-in JSON codec:
 
 ```ts
-import {Metadata, MimeType, Payload} from "rsocket-frames-ts";
 import type {ByteReader} from "bebyte";
+import type {Metadata, Payload} from "rsocket-frames-ts";
+import {MimeType} from "rsocket-frames-ts";
 
-class UInt32MimeType extends MimeType<number> {
+const encoder = new TextEncoder();
+const decoder = new TextDecoder();
+
+function encodeJson(value: unknown): Uint8Array {
+  const json = JSON.stringify(value);
+  if (json === undefined) {
+    throw new TypeError("JSON value is not serializable");
+  }
+  return encoder.encode(json);
+}
+
+function decodeJson<T>(bytes: Uint8Array): T | string | undefined {
+  if (bytes.length === 0) return undefined;
+  const text = decoder.decode(bytes);
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text;
+  }
+}
+
+class ApplicationJson<T = unknown> extends MimeType<T> {
   constructor() {
-    super("application/x.uint32");
+    super("application/json", 0x05);
   }
 
-  protected override serializePayload(value: number): Payload<number> {
-    const bytes = this.encode(value);
-    return new Payload(this, value, bytes);
+  protected override serializePayload(value: T): Payload<T> {
+    return super.serializePayload(encodeJson(value) as unknown as T);
   }
 
-  protected override deserializePayload(reader: ByteReader): Payload<number> {
-    const bytes = reader.viewRemaining();
-    return this.decode(bytes) as unknown as Payload<number>;
+  protected override deserializePayload(reader: ByteReader): Payload<T> {
+    return decodeJson<T>(reader.viewRemaining()) as Payload<T>;
   }
 
-  protected override serializeMetadata(value: number): Metadata<number> {
-    const bytes = this.encode(value);
-    return new Metadata(this, value, bytes);
+  protected override serializeMetadata(value: T): Metadata<T> {
+    return super.serializeMetadata(encodeJson(value) as unknown as T);
   }
 
   protected override deserializeMetadata(
     reader: ByteReader,
     hasPayload = true
-  ): Metadata<number> {
+  ): Metadata<T> {
     const bytes = hasPayload
       ? reader.viewBytes(reader.i24())
       : reader.viewRemaining();
-    return this.decode(bytes) as unknown as Metadata<number>;
-  }
-
-  private encode(value: number): Uint8Array {
-    const bytes = new Uint8Array(4);
-    new DataView(bytes.buffer).setUint32(0, value, false);
-    return bytes;
-  }
-
-  private decode(bytes: Uint8Array): number {
-    if (bytes.byteLength !== 4) {
-      throw new RangeError("UInt32 payload must contain exactly four bytes");
-    }
-    return new DataView(
-      bytes.buffer,
-      bytes.byteOffset,
-      bytes.byteLength
-    ).getUint32(0, false);
+    if (bytes.length === 0) return "" as unknown as Metadata<T>;
+    return decodeJson<T>(bytes) as Metadata<T>;
   }
 }
 
-export const UINT32 = new UInt32MimeType();
+export const APPLICATION_JSON = new ApplicationJson();
 ```
 
-## Scope and specification
+Well-known names and identifiers are assigned by the
+[RSocket well-known MIME type registry](https://github.com/rsocket/rsocket/blob/master/Extensions/WellKnownMimeTypes.md).
+`application/json` has identifier `0x05`, so both values are passed to `super`.
+Creating the instance replaces registry lookups by name and identifier. Never
+invent an identifier: only MIME types listed in the registry may have one.
 
-This package encodes and decodes frames. It does not open sockets, allocate
-stream IDs, apply backpressure or fragment application payloads.
+### Register a custom MIME type
 
-- [RSocket 1.0 protocol specification](https://github.com/rsocket/rsocket/blob/master/Protocol.md)
-- [RSocket metadata extension specifications](https://github.com/rsocket/rsocket/tree/master/Extensions)
+A custom MIME type implements the same four methods, but passes only its name to
+`super`. Its full name is written to composite metadata.
+
+```ts
+type Event = {
+  name: string;
+  createdAt: string;
+};
+
+class EventJson extends MimeType<Event> {
+  constructor() {
+    super("application/vnd.example.event+json");
+  }
+
+  protected override serializePayload(value: Event): Payload<Event> {
+    return super.serializePayload(encodeJson(value) as unknown as Event);
+  }
+
+  protected override deserializePayload(reader: ByteReader): Payload<Event> {
+    return decodeJson<Event>(reader.viewRemaining()) as Payload<Event>;
+  }
+
+  protected override serializeMetadata(value: Event): Metadata<Event> {
+    return super.serializeMetadata(encodeJson(value) as unknown as Event);
+  }
+
+  protected override deserializeMetadata(
+    reader: ByteReader,
+    hasPayload = true
+  ): Metadata<Event> {
+    const bytes = hasPayload
+      ? reader.viewBytes(reader.i24())
+      : reader.viewRemaining();
+    if (bytes.length === 0) return "" as unknown as Metadata<Event>;
+    return decodeJson<Event>(bytes) as Metadata<Event>;
+  }
+}
+
+export const EVENT_JSON = new EventJson();
+```
+
+## References
+
+- [RSocket metadata extensions](https://github.com/rsocket/rsocket/tree/master/Extensions)
 - [Well-known MIME type registry](https://github.com/rsocket/rsocket/blob/master/Extensions/WellKnownMimeTypes.md)
-
-License: [MIT](LICENSE.md).
