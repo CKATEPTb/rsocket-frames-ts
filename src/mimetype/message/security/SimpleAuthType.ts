@@ -1,6 +1,7 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {decode, encode} from "@/utils";
 import {AuthType} from "@/mimetype/message/security/AuthType";
+import {assertByteLength} from "@/utils";
 
 /**
  * # Simple Authentication Type
@@ -44,8 +45,8 @@ export class SimpleAuthType extends AuthType<{
      */
     public read(reader: ByteReader): { username: string; password: string } {
         return {
-            username: decode(reader.read(reader.i16())),
-            password: decode(reader.readRemaining())
+            username: decode(reader.viewBytes(reader.i16())),
+            password: decode(reader.viewRemaining())
         }
     }
 
@@ -63,6 +64,7 @@ export class SimpleAuthType extends AuthType<{
      */
     public write(writer: ByteWriter, data: { username: string; password: string }): void {
         const username = encode(data.username)
+        assertByteLength("Username", username.length, 0, 0xffff)
         writer.i16(username.length)
         writer.write(username)
         writer.write(encode(data.password))

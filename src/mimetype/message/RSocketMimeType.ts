@@ -1,7 +1,8 @@
-import bebyte, {ByteReader} from "bebyte";
-import {decode, encode} from "@/utils";
+import type {ByteReader} from "bebyte";
 import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
+import {createReader, createWriter} from "@/binary";
+import {decodeCustomType, encodeCustomType} from "@/mimetype/encoding";
 
 /**
  * ## Metadata Payload for data MIME Type
@@ -24,26 +25,22 @@ import {Metadata} from "@/frame/context/Metadata";
  * Many are registered with [IANA]{@link https://www.iana.org/assignments/media-types/media-types.xhtml} and others such as [Routing]{@link RSocketRouting} and [Tracing (Zipkin)]{@link} are not.
  * [Suffix]{@link http://www.iana.org/assignments/media-type-structured-suffix/media-type-structured-suffix.xml} rules MAY be used for handling layout.  The string MUST NOT be null terminated.  (Not present if M flag is set)
  */
-export class RSocketMimeType extends MimeType<MimeType> {
+export class RSocketMimeType extends MimeType<MimeType<any>> {
     /**
      * Serializes a single `MimeType` to binary metadata format.
      *
      * @param {MimeType} payload - The MIME type to serialize.
      * @returns {Metadata<MimeType>} The metadata object wrapping the MIME type.
      */
-    protected serializeMetadata(payload: MimeType): Metadata<MimeType> {
-        return new class RSocketMimeTypeMetadata extends Metadata<MimeType> {
-            public toUint8Array(): Uint8Array {
-                const writer = bebyte.writer()
-                if (payload.isWellKnown) writer.i8(128 | payload.identifier!)
-                else {
-                    const type = encode(payload.mimeType)
-                    writer.i7(type.length)
-                    writer.write(type)
-                }
-                return writer.toUint8Array()
-            }
-        }(this, payload)
+    protected override serializeMetadata(payload: MimeType<any>): Metadata<MimeType<any>> {
+        const writer = createWriter()
+        if (payload.isWellKnown) writer.i8(128 | payload.identifier!)
+        else {
+            const type = encodeCustomType(payload.mimeType, "MIME type")
+            writer.i7(type.length - 1)
+            writer.write(type)
+        }
+        return new Metadata(this, payload, writer.toUint8Array())
     }
 
     /**
@@ -53,12 +50,18 @@ export class RSocketMimeType extends MimeType<MimeType> {
      * @param {boolean} [hasPayload=true] - Whether the payload has a length prefix.
      * @returns {Metadata<MimeType>} The resulting metadata.
      */
-    protected deserializeMetadata(payload: ByteReader, hasPayload: boolean = true): Metadata<MimeType> {
-        const array = hasPayload ? payload.read(payload.i24()) : payload.readRemaining();
-        const buffer = bebyte.reader(array);
+    protected override deserializeMetadata(payload: ByteReader, hasPayload: boolean = true): Metadata<MimeType<any>> {
+        const array = hasPayload ? payload.viewBytes(payload.i24()) : payload.viewRemaining();
+        const buffer = createReader(array);
         const i8 = buffer.i8()
         const i7 = i8 & 0x7F
-        return new Metadata(this, (i8 >> 7 ? MimeType.valueOf(i7) : new MimeType(decode(buffer.read(i7)))))
+        const mimeType = i8 >> 7
+            ? MimeType.valueOf(i7)
+            : MimeType.valueOf(decodeCustomType(i7, length => buffer.viewBytes(length)))
+        if (buffer.offset !== array.length) {
+            throw new RangeError(`MIME type metadata contains ${array.length - buffer.offset} unexpected trailing byte(s)`);
+        }
+        return new Metadata(this, mimeType, array)
     }
 
 }
@@ -86,27 +89,24 @@ export class RSocketMimeType extends MimeType<MimeType> {
  * Many are registered with [IANA]{@link https://www.iana.org/assignments/media-types/media-types.xhtml} and others such as [Routing]{@link RSocketRouting} and [Tracing (Zipkin)]{@link} are not.
  * [Suffix]{@link http://www.iana.org/assignments/media-type-structured-suffix/media-type-structured-suffix.xml} rules MAY be used for handling layout.  The string MUST NOT be null terminated.  (Not present if M flag is set)
  */
-export class RSocketMimeTypes extends MimeType<Array<MimeType>> {
+export class RSocketMimeTypes extends MimeType<Array<MimeType<any>>> {
     /**
      * Serializes a list of MIME types into binary metadata format.
      *
      * @param {Array<MimeType>} payloads - MIME types to encode.
      * @returns {Metadata<Array<MimeType>>} The resulting metadata.
      */
-    protected serializeMetadata(payloads: Array<MimeType>): Metadata<Array<MimeType>> {
-        return new class RSocketMimeTypesMetadata extends Metadata<Array<MimeType>> {
-            public toUint8Array(): Uint8Array {
-                return payloads.reduce((acc, payload) => {
-                    if (payload.isWellKnown) acc.i8(128 | payload.identifier!)
-                    else {
-                        const type = encode(payload.mimeType)
-                        acc.i7(type.length)
-                        acc.write(type)
-                    }
-                    return acc
-                }, bebyte.writer()).toUint8Array()
+    protected override serializeMetadata(payloads: Array<MimeType<any>>): Metadata<Array<MimeType<any>>> {
+        const writer = createWriter()
+        for (const payload of payloads) {
+            if (payload.isWellKnown) writer.i8(128 | payload.identifier!)
+            else {
+                const type = encodeCustomType(payload.mimeType, "MIME type")
+                writer.i7(type.length - 1)
+                writer.write(type)
             }
-        }(this, payloads)
+        }
+        return new Metadata(this, payloads, writer.toUint8Array())
     }
 
     /**
@@ -116,15 +116,17 @@ export class RSocketMimeTypes extends MimeType<Array<MimeType>> {
      * @param {boolean} [hasPayload=true] - Whether to read a length-prefixed block.
      * @returns {Metadata<Array<MimeType>>} Parsed metadata with MIME types.
      */
-    protected deserializeMetadata(reader: ByteReader, hasPayload: boolean = true): Metadata<Array<MimeType>> {
-        const array = hasPayload ? reader.read(reader.i24()) : reader.readRemaining();
-        const buffer = bebyte.reader(array);
-        const payloads: Array<MimeType> = []
+    protected override deserializeMetadata(reader: ByteReader, hasPayload: boolean = true): Metadata<Array<MimeType<any>>> {
+        const array = hasPayload ? reader.viewBytes(reader.i24()) : reader.viewRemaining();
+        const buffer = createReader(array);
+        const payloads: Array<MimeType<any>> = []
         while (buffer.offset < array.length) {
             const i8 = buffer.i8()
             const i7 = i8 & 0x7F
-            payloads.push(i8 >> 7 ? MimeType.valueOf(i7) : new MimeType(decode(buffer.read(i7))))
+            payloads.push(i8 >> 7
+                ? MimeType.valueOf(i7)
+                : MimeType.valueOf(decodeCustomType(i7, length => buffer.viewBytes(length))))
         }
-        return new Metadata(this, payloads)
+        return new Metadata(this, payloads, array)
     }
 }

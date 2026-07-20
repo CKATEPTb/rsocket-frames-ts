@@ -1,9 +1,10 @@
-import bebyte, {ByteReader} from "bebyte";
-import {decode, encode} from "@/utils";
+import type {ByteReader} from "bebyte";
 import {MimeType} from "@/mimetype/MimeType";
 import {WellKnownAuthType} from "@/mimetype/message/security";
 import {AuthType} from "@/mimetype/message/security/AuthType";
 import {Metadata} from "@/frame/context/Metadata";
+import {createReader, createWriter} from "@/binary";
+import {decodeCustomType, encodeCustomType} from "@/mimetype/encoding";
 
 type AuthData<D> = { authType: AuthType<D>, data: D }
 
@@ -46,25 +47,16 @@ export class RSocketAuth<D> extends MimeType<AuthData<D>> {
      * @param {AuthData<D>} payload - Authentication data to serialize.
      * @returns {Metadata<AuthData<D>>} Metadata wrapper containing the auth data.
      */
-    protected serializeMetadata(payload: AuthData<D>): Metadata<AuthData<D>> {
-        return new class RSocketAuthMetadata extends Metadata<AuthData<D>> {
-            /**
-             * Converts the authentication metadata into a binary format.
-             *
-             * @returns {Uint8Array} Serialized authentication metadata.
-             */
-            public toUint8Array(): Uint8Array {
-                const writer = bebyte.writer()
-                if (payload.authType.isWellKnown) writer.i8(128 | payload.authType.identifier!)
-                else {
-                    const type = encode(payload.authType.authType)
-                    writer.i7(type.length)
-                    writer.write(type)
-                }
-                payload.authType.write(writer, payload.data)
-                return writer.toUint8Array()
-            }
-        }(this, payload)
+    protected override serializeMetadata(payload: AuthData<D>): Metadata<AuthData<D>> {
+        const writer = createWriter()
+        if (payload.authType.isWellKnown) writer.i8(128 | payload.authType.identifier!)
+        else {
+            const type = encodeCustomType(payload.authType.authType, "Authentication type")
+            writer.i7(type.length - 1)
+            writer.write(type)
+        }
+        payload.authType.write(writer, payload.data)
+        return new Metadata(this, payload, writer.toUint8Array())
     }
 
     /**
@@ -77,13 +69,18 @@ export class RSocketAuth<D> extends MimeType<AuthData<D>> {
      * @param {boolean} [hasPayload=true] - Whether to expect a length-prefixed payload.
      * @returns {Metadata<AuthData<D>>} Parsed authentication metadata.
      */
-    protected deserializeMetadata(payload: ByteReader, hasPayload: boolean = true): Metadata<AuthData<D>> {
-        const array = hasPayload ? payload.read(payload.i24()) : payload.readRemaining();
-        const buffer = bebyte.reader(array);
+    protected override deserializeMetadata(payload: ByteReader, hasPayload: boolean = true): Metadata<AuthData<D>> {
+        const array = hasPayload ? payload.viewBytes(payload.i24()) : payload.viewRemaining();
+        const buffer = createReader(array);
         const i8 = buffer.i8()
         const i7 = i8 & 0x7F
-        const authType = i8 >> 7 ? WellKnownAuthType.valueOf(i7) : WellKnownAuthType.valueOf(decode(buffer.read(i7)))
+        const authType = i8 >> 7
+            ? WellKnownAuthType.valueOf(i7)
+            : WellKnownAuthType.valueOf(decodeCustomType(i7, length => buffer.viewBytes(length)))
         const data = authType.read(buffer)
-        return new Metadata(this, {authType: authType, data: data})
+        if (buffer.remaining !== 0) {
+            throw new RangeError(`Authentication metadata contains ${buffer.remaining} unexpected trailing byte(s)`);
+        }
+        return new Metadata(this, {authType, data}, array)
     }
 }

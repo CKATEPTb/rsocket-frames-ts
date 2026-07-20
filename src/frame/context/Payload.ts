@@ -1,5 +1,5 @@
-import {ByteWriter} from "bebyte";
-import {MimeType} from "@/mimetype";
+import type {ByteWriter} from "bebyte";
+import type {MimeType} from "@/mimetype/MimeType";
 import {FrameWriter} from "@/frame/FrameWriter";
 
 /**
@@ -12,9 +12,14 @@ export class Payload<T = Uint8Array> extends FrameWriter {
      * Creates a new [Payload]{@link Payload} instance.
      *
      * @param mimeType - The MIME type indicating the format of the payload data.
-     * @param payload - The binary payload content.
+     * @param payload Payload value or already encoded bytes.
+     * @param encoded Existing wire bytes for an already decoded or eagerly encoded value.
      */
-    public constructor(public readonly mimeType: MimeType<T>, public readonly payload: T) {
+    public constructor(
+        public readonly mimeType: MimeType<T>,
+        public readonly payload: T,
+        private readonly encoded?: Uint8Array
+    ) {
         super()
     }
 
@@ -24,7 +29,11 @@ export class Payload<T = Uint8Array> extends FrameWriter {
      * @returns The payload data as a [Uint8Array]{@link Uint8Array}.
      */
     public toUint8Array(): Uint8Array {
-        return this.payload as Uint8Array
+        if (this.encoded !== undefined) return this.encoded;
+        if (!(this.payload instanceof Uint8Array)) {
+            throw new TypeError("Payload is not encoded; create it with its MIME type's toPayload() method")
+        }
+        return this.payload
     }
 
     /**

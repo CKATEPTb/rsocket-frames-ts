@@ -1,6 +1,7 @@
-import bebyte, {ByteReader} from "bebyte";
+import type {ByteReader} from "bebyte";
 import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
+import {createReader, createWriter} from "@/binary";
 
 /**
  * Bit-level flags describing Zipkin tracing metadata behavior.
@@ -30,8 +31,8 @@ export type TracingZipkinFlags = {
  */
 export type TracingZipkinPayload = {
     flags: TracingZipkinFlags;
-    traceId: bigint | [bigint, bigint]; // 64-bit or 128-bit
-    spanId: bigint;
+    traceId?: bigint | [bigint, bigint];
+    spanId?: bigint;
     parentSpanId?: bigint;
 };
 
@@ -92,39 +93,39 @@ export class RSocketTracingZipkin extends MimeType<TracingZipkinPayload> {
      * @param {TracingZipkinPayload} payload - The tracing data to encode.
      * @returns {Metadata<TracingZipkinPayload>} A Metadata object with a `toUint8Array()` method.
      */
-    protected serializeMetadata(payload: TracingZipkinPayload): Metadata<TracingZipkinPayload> {
-        return new class extends Metadata<TracingZipkinPayload> {
-            public toUint8Array(): Uint8Array {
-                const writer = bebyte.writer();
+    protected override serializeMetadata(payload: TracingZipkinPayload): Metadata<TracingZipkinPayload> {
+        const writer = createWriter();
+        let flags = 0;
+        if (payload.flags.idsSet) flags |= 128;
+        if (payload.flags.debug) flags |= 64;
+        if (payload.flags.sampled) flags |= 32;
+        if (payload.flags.notSampled) flags |= 16;
+        if (payload.flags.traceId128) flags |= 8;
+        if (payload.flags.hasParent) flags |= 4;
+        writer.i8(flags);
 
-                let flags = 0;
-                if (payload.flags.idsSet) flags |= 128;
-                if (payload.flags.debug) flags |= 64;
-                if (payload.flags.sampled) flags |= 32;
-                if (payload.flags.notSampled) flags |= 16;
-                if (payload.flags.traceId128) flags |= 8;
-                if (payload.flags.hasParent) flags |= 4;
-
-                writer.i8(flags);
-
-                if (payload.flags.traceId128 && Array.isArray(payload.traceId)) {
-                    writer.i64(payload.traceId[0]);
-                    writer.i64(payload.traceId[1]);
-                } else if (!Array.isArray(payload.traceId)) {
-                    writer.i64(payload.traceId);
-                } else {
-                    throw new Error("Invalid traceId format");
-                }
-
-                writer.i64(payload.spanId);
-
-                if (payload.flags.hasParent && payload.parentSpanId != null) {
-                    writer.i64(payload.parentSpanId);
-                }
-
-                return writer.toUint8Array();
+        if (payload.flags.idsSet) {
+            if (payload.flags.traceId128 && Array.isArray(payload.traceId)) {
+                writer.i64(payload.traceId[0]);
+                writer.i64(payload.traceId[1]);
+            } else if (!payload.flags.traceId128 && typeof payload.traceId === "bigint") {
+                writer.i64(payload.traceId);
+            } else {
+                throw new TypeError("traceId must match the traceId128 flag when IDs are set");
             }
-        }(this, payload);
+            if (payload.spanId === undefined) {
+                throw new TypeError("spanId is required when tracing IDs are set");
+            }
+            writer.i64(payload.spanId);
+            if (payload.flags.hasParent) {
+                if (payload.parentSpanId === undefined) {
+                    throw new TypeError("parentSpanId is required when hasParent is set");
+                }
+                writer.i64(payload.parentSpanId);
+            }
+        }
+
+        return new Metadata(this, payload, writer.toUint8Array());
     }
 
     /**
@@ -134,39 +135,36 @@ export class RSocketTracingZipkin extends MimeType<TracingZipkinPayload> {
      * @param {boolean} [hasPayload=true] - Whether metadata is prefixed with a length (i24).
      * @returns {Metadata<TracingZipkinPayload>} Parsed tracing metadata.
      */
-    protected deserializeMetadata(reader: ByteReader, hasPayload: boolean = true): Metadata<TracingZipkinPayload> {
-        const array = hasPayload ? reader.read(reader.i24()) : reader.readRemaining();
-        const r = bebyte.reader(array);
+    protected override deserializeMetadata(reader: ByteReader, hasPayload: boolean = true): Metadata<TracingZipkinPayload> {
+        const array = hasPayload ? reader.viewBytes(reader.i24()) : reader.viewRemaining();
+        const r = createReader(array);
 
         const flagByte = r.i8();
         const flags: TracingZipkinFlags = {
-            idsSet: (flagByte & 128) == 128,
-            debug: (flagByte & 64) == 64,
-            sampled: (flagByte & 32) == 32,
-            notSampled: (flagByte & 16) == 16,
-            traceId128: (flagByte & 8) == 8,
-            hasParent: (flagByte & 4) == 4
+            idsSet: (flagByte & 128) === 128,
+            debug: (flagByte & 64) === 64,
+            sampled: (flagByte & 32) === 32,
+            notSampled: (flagByte & 16) === 16,
+            traceId128: (flagByte & 8) === 8,
+            hasParent: (flagByte & 4) === 4
         };
 
-        let traceId: bigint | [bigint, bigint];
-        if (flags.traceId128) {
-            traceId = [r.i64(), r.i64()];
-        } else {
-            traceId = r.i64();
-        }
-
-        const spanId = r.i64();
-
+        let traceId: bigint | [bigint, bigint] | undefined;
+        let spanId: bigint | undefined;
         let parentSpanId: bigint | undefined;
-        if (flags.hasParent) {
-            parentSpanId = r.i64();
+        if (flags.idsSet) {
+            traceId = flags.traceId128 ? [r.i64(), r.i64()] : r.i64();
+            spanId = r.i64();
+            if (flags.hasParent) parentSpanId = r.i64();
+        }
+        if (r.offset !== array.length) {
+            throw new RangeError(`Tracing metadata contains ${array.length - r.offset} unexpected trailing byte(s)`);
         }
 
-        return new Metadata(this, {
-            flags,
-            traceId,
-            spanId,
-            parentSpanId
-        });
+        const decoded: TracingZipkinPayload = {flags};
+        if (traceId !== undefined) decoded.traceId = traceId;
+        if (spanId !== undefined) decoded.spanId = spanId;
+        if (parentSpanId !== undefined) decoded.parentSpanId = parentSpanId;
+        return new Metadata(this, decoded, array);
     }
 }

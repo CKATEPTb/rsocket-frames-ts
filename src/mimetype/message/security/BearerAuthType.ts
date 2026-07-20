@@ -1,4 +1,4 @@
-import {ByteReader, ByteWriter} from "bebyte";
+import type {ByteReader, ByteWriter} from "bebyte";
 import {decode, encode} from "@/utils";
 import {AuthType} from "@/mimetype/message/security/AuthType";
 
@@ -30,7 +30,7 @@ export class BearerAuthType extends AuthType<string> {
      * @returns {string} Decoded bearer token as a UTF-8 string.
      */
     public read(reader: ByteReader): string {
-        return decode(reader.readRemaining());
+        return decode(reader.viewRemaining());
     }
 
     /**

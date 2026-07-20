@@ -1,5 +1,5 @@
-import {ByteWriter} from "bebyte";
-import {MimeType} from "@/mimetype";
+import type {ByteWriter} from "bebyte";
+import type {MimeType} from "@/mimetype/MimeType";
 import {FrameWriter} from "@/frame/FrameWriter";
 
 /**
@@ -15,9 +15,14 @@ export class Metadata<T = Uint8Array> extends FrameWriter {
      * Creates a new [Metadata]{@link Metadata} instance.
      *
      * @param mimeType - The MIME type describing the format of the metadata.
-     * @param payload - The actual metadata payload.
+     * @param payload Metadata value or already encoded bytes.
+     * @param encoded Existing wire bytes for an already decoded or eagerly encoded value.
      */
-    public constructor(public readonly mimeType: MimeType<T>, public readonly payload: T) {
+    public constructor(
+        public readonly mimeType: MimeType<T>,
+        public readonly payload: T,
+        private readonly encoded?: Uint8Array
+    ) {
         super()
     }
 
@@ -27,7 +32,11 @@ export class Metadata<T = Uint8Array> extends FrameWriter {
      * @returns The metadata payload as a [Uint8Array]{@link Uint8Array}.
      */
     public toUint8Array(): Uint8Array {
-        return this.payload as Uint8Array
+        if (this.encoded !== undefined) return this.encoded;
+        if (!(this.payload instanceof Uint8Array)) {
+            throw new TypeError("Metadata is not encoded; create it with its MIME type's toMetadata() method")
+        }
+        return this.payload
     }
 
     /**

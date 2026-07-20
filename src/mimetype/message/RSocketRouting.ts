@@ -1,7 +1,9 @@
-import bebyte, {ByteReader} from "bebyte";
+import type {ByteReader} from "bebyte";
 import {decode, encode} from "@/utils";
 import {MimeType} from "@/mimetype/MimeType";
 import {Metadata} from "@/frame/context/Metadata";
+import {createReader, createWriter} from "@/binary";
+import {assertByteLength} from "@/utils";
 
 /**
  * # Routing Metadata Extension
@@ -40,25 +42,15 @@ export class RSocketRouting extends MimeType<Array<string>> {
      * @param {Array<string>} payloads - Array of routing tags to serialize.
      * @returns {Metadata<Array<string>>} Serialized metadata instance.
      */
-    protected serializeMetadata(payloads: Array<string>): Metadata<Array<string>> {
-        return new class RSocketRoutingMetadata extends Metadata<Array<string>> {
-            /**
-             * Converts the routing tag array into a `Uint8Array` binary format.
-             *
-             * Format:
-             * [tag_length: u8][tag: UTF-8 bytes] repeated for each tag.
-             *
-             * @returns {Uint8Array} Serialized routing metadata.
-             */
-            public toUint8Array(): Uint8Array {
-                return payloads.reduce((acc, payload) => {
-                    const tag = encode(payload)
-                    acc.i8(tag.length)
-                    acc.write(tag)
-                    return acc
-                }, bebyte.writer()).toUint8Array()
-            }
-        }(this, payloads)
+    protected override serializeMetadata(payloads: Array<string>): Metadata<Array<string>> {
+        const writer = createWriter()
+        for (const payload of payloads) {
+            const tag = encode(payload)
+            assertByteLength("Routing tag", tag.length, 0, 0xff)
+            writer.i8(tag.length)
+            writer.write(tag)
+        }
+        return new Metadata(this, payloads, writer.toUint8Array())
     }
 
     /**
@@ -69,13 +61,13 @@ export class RSocketRouting extends MimeType<Array<string>> {
      *
      * @returns {Uint8Array} Serialized routing metadata.
      */
-    protected deserializeMetadata(payloads: ByteReader, hasPayload: boolean = true): Metadata<Array<string>> {
-        const array = hasPayload ? payloads.read(payloads.i24()) : payloads.readRemaining();
-        const buffer = bebyte.reader(array)
+    protected override deserializeMetadata(payloads: ByteReader, hasPayload: boolean = true): Metadata<Array<string>> {
+        const array = hasPayload ? payloads.viewBytes(payloads.i24()) : payloads.viewRemaining();
+        const buffer = createReader(array)
         const deserialized: Array<string> = []
         while (buffer.offset < array.length) {
-            deserialized.push(decode(buffer.read(buffer.i8())))
+            deserialized.push(decode(buffer.viewBytes(buffer.i8())))
         }
-        return new Metadata(this, deserialized)
+        return new Metadata(this, deserialized, array)
     }
 }
