@@ -1,3 +1,13 @@
+# 🚨 REPOSITORY MOVED
+
+This repository is archived and no longer maintained. Development has continued inside the monorepo.
+
+## 📦 New Location
+
+👉 **[RSocket-TS](https://github.com/CKATEPTb/rsocket-ts)**
+
+---
+
 # rsocket-frames-ts
 
 Encode and decode [RSocket Protocol 1.0 frames](https://github.com/rsocket/rsocket/blob/master/Protocol.md)
